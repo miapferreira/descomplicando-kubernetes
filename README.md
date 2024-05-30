@@ -1,3 +1,14 @@
+# Prometheus
+
+Este projeto tem como objetivo documentar e compartilhar o conhecimento adquiridido durante os meus estudos sobre o Kubernetes
+
+
+## Referências
+
+ - [Treinamento LinuxTips PICK](https://www.linuxtips.io/pick)
+ - [Documentação oficial Kubernetes](https://kubernetes.io/docs/home/)
+
+
 Para termos maior compreensão do Kubernetes, precisamos entender alguns componentes que são essenciais para seu funcionamento.
 
 ## O que é um Container Engine?
