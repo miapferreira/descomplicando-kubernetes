@@ -37,4 +37,3 @@ No Kubernetes, o container engine e o container runtime desempenham papéis cruc
 - **OCI**: Garante que as imagens de containers e os runtimes sejam compatíveis, permitindo que Kubernetes funcione de maneira eficiente com diferentes tecnologias de container.
 
 Compreender esses componentes e suas funções é fundamental para gerenciar e operar clusters Kubernetes de maneira eficaz.
-

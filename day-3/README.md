@@ -1,3 +1,7 @@
+# Definição de Deployment
+
+O deployment é responsável por armazenar todas as informações e parâmetros da aplicação, além de gerenciar os pods associados a ela. Por meio do deployment, é possível realizar operações como atualização, reinicialização, escalonamento e modificação de qualquer parâmetro relacionado à nossa aplicação.
+
 # Estratégias de Atualização para o Deployment:
 
 ## RollingUpdate:
@@ -39,3 +43,6 @@ Esta é uma documentação de exemplo que pode ser utilizada no GitHub para expl
 - **kubectl rollout restart deployment -n giropops nginx-deployment** - Realiza o restart do deployment da aplicação.
 
 - **kubectl scale deployment -n giropops --replicas 11 nginx-deployment** - Realiza o scale de réplicas do deployment.
+
+
+
