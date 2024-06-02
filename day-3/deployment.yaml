@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-deployment
+    fruit: banana   
+  name: nginx-deployment
+  namespace: giropops
+spec:
+  replicas: 10   
+  revisionHistoryLimit: 10   
+  selector:
+    matchLabels:
+      app: nginx-deployment
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-deployment
+    spec:
+      containers:
+      - image: nginx:1.15.0
+        name: nginx
+        resources:
+          limits:
+            cpu: 600m
+            memory: 250Mi
+          requests:
+            cpu: 150m
+            memory: 100Mi
+        ports:
+        - containerPort: 80
