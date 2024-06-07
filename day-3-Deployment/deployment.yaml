@@ -23,7 +23,7 @@ spec:
         app: nginx-deployment
     spec:
       containers:
-      - image: nginx:1.15.0
+      - image: nginx:1.19.1
         name: nginx
         resources:
           limits:
