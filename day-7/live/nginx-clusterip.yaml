@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+  labels:
+    app: nginx-clusterip
+    env: dev
+spec:
+  selector:
+    app: michel-deployment
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+  type: ClusterIP

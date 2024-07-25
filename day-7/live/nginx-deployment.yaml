@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: michel-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: michel-deployment
+  template:
+    metadata:
+      labels:
+        app: michel-deployment
+    spec:
+      containers:
+      - name: michel-deployment
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80

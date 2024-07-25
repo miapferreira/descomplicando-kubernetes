@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport
+  labels:
+    app: nginx-nodeport
+    env: dev
+spec:
+  selector:
+    app: michel-deployment
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    nodePort: 30080 # This is the port that will be exposed on the nodes
+  type: NodePort
