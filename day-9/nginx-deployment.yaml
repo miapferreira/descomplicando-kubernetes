@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations:  # Corrigido
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9113'
+    spec: 
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+      - name: prometheus-exporter
+        image: nginx/nginx-prometheus-exporter:0.11.0
+        args:
+          - '-nginx.scrape-uri=http://localhost/metrics'
+        resources:
+          requests:
+            cpu: 0.3
+            memory: 128Mi
+        ports:
+        - containerPort: 9113
+          name: metrics
+      volumes:  
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+          defaultMode: 420
