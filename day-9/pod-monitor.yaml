@@ -1,30 +1,33 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: pod-monitor
+  name: nginx-pod
   labels:
-    app: pod-monitor
+    app: nginx
 spec:
   containers:
-  - name: pod-monitor
-    image: prom/pod-monitor:1.0.0
-    ports:
-    - containerPort: 80
-      name: http
-    - containerPort: 9113
-      name: metrics
-    volumeMounts:
-    - name: pod-monitor-config
-      mountPath: /etc/pod-monitor/config.yaml
-      subPath: config.yaml
-    args:
-      - '-pod-monitor.scrape-uri=http://localhost/metrics'
-    resources:
-      requests:
-        cpu: 0.3
-        memory: 128Mi
-  volumes: 
-  - name: pod-monitor-config
-    configMap:
-      name: pod-monitor-config
-      defaultMode: 420
+    - name: nginx-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: http
+      volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+    - name: nginx-exporter
+      image: 'nginx/nginx-prometheus-exporter:0.11.0'
+      args:
+        - '-nginx.scrape-uri=http://localhost/metrics'
+      resources:
+        limits:
+          memory: 128Mi
+          cpu: 0.3
+      ports:
+        - containerPort: 9113
+          name: metrics
+  volumes:
+    - name: nginx-config
+      configMap:
+        defaultMode: 420
+        name: nginx-config
