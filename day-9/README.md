@@ -25,17 +25,7 @@ eksctl version
 
 ---
 
-## 2. Configurar o `kubectl` para o Cluster EKS
-
-Após criar o cluster, configure o `kubectl` para interagir com ele:
-
-```bash
-aws eks --region us-east-1 update-kubeconfig --name eks-cluster
-```
-
----
-
-## 3. Criar o Cluster EKS
+## 2. Criar o Cluster EKS
 
 Crie o cluster usando o comando abaixo:
 
@@ -64,6 +54,16 @@ Verifique se o cluster foi criado com sucesso:
 
 ```bash
 eksctl get cluster -A
+```
+
+---
+
+## 3. Configurar o `kubectl` para o Cluster EKS
+
+Após criar o cluster, configure o `kubectl` para interagir com ele:
+
+```bash
+aws eks --region us-east-1 update-kubeconfig --name eks-cluster
 ```
 
 ---
