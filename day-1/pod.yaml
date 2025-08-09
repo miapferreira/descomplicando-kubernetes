@@ -1,17 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  creationTimestamp: null
+  name: giropops
   labels:
     run: giropops
-  name: giropops
 spec:
   containers:
-  - image: nginx
-    name: giropops
+  - name: giropops
+    image: nginx
     ports:
     - containerPort: 80
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-status: {}
