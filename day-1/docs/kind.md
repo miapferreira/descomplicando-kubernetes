@@ -46,7 +46,13 @@ source ~/.bashrc
 
 ### 3. Instalando o Docker
 
-**macOS:**
+**Linux (Ubuntu/Debian):**
+
+```bash
+curl -fsSL https://get.docker.com/ | sh
+```
+
+**macOS - Docker Desktop:**
 
 ```bash
 brew install --cask docker
@@ -54,12 +60,24 @@ brew install --cask docker
 
 > **Nota**: Ou baixar do site oficial: https://www.docker.com/products/docker-desktop
 
-**⚠️ IMPORTANTE**: Após a instalação, você precisa iniciar o Docker Desktop. O Kind depende do Docker para funcionar.
+**macOS - Colima (Alternativa ao Docker Desktop):**
 
-**Iniciar o Docker Desktop:**
+```bash
+brew install colima
+```
+
+**⚠️ IMPORTANTE**: Após a instalação, você precisa iniciar o Docker. O Kind depende do Docker para funcionar.
+
+**Iniciar o Docker Desktop (macOS):**
 
 ```bash
 open -a Docker
+```
+
+**Iniciar o Colima (macOS):**
+
+```bash
+colima start
 ```
 
 **Verificar se o Docker está rodando:**

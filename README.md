@@ -119,5 +119,3 @@ Aqui está uma lista das portas comuns utilizadas no Kubernetes e suas respectiv
 - **Porta 80**: Porta padrão para tráfego HTTP.
 - **Porta 443**: Porta padrão para tráfego HTTPS.
 
-Instalacao cluster K8S
-
