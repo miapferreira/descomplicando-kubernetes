@@ -1,6 +1,6 @@
 # Kubernetes
 
-Este projeto tem como objetivo documentar e compartilhar o conhecimento adquiridido durante os meus estudos sobre o Kubernetes
+Este projeto tem como objetivo documentar e compartilhar o conhecimento adquirido durante os meus estudos sobre o Kubernetes
 
 
 ## Referências
@@ -71,7 +71,7 @@ No Kubernetes, os **workers** são responsáveis por executar as aplicações de
 ### kubelet
 
 - **Descrição**: O kubelet é o agente do Kubernetes que roda em todos os nós do cluster.
-- **Função**: O kubelet garante que os contêineres descritos nos objetos de Pod estejam rodando corretamente. Ele monitora o estado dos pods e reporta ao Control Plane.
+- **Função**: O kubelet garante que os containers descritos nos objetos de Pod estejam rodando corretamente. Ele monitora o estado dos pods e reporta ao Control Plane.
 
 ### kube-proxy
 
