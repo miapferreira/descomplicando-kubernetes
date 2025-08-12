@@ -1,2 +1,4 @@
 * [🏠 Início](/)
-* [📚 Dia 1 - Introdução ao Kubernetes](/day-1/docs/kind.md)
+* [📚 Dia 1 - Introdução ao Kubernetes](/docs/day-1.md)
+* [📚 Dia 2 - Limites de Utilização nos Pods](/docs/day-2.md)
+* [📚 Dia 3 - Deployments](/docs/day-3.md)
