@@ -5,18 +5,22 @@ metadata:
     app: nginx-deployment
   name: nginx-deployment
 spec:
-  replicas: 1
+  replicas: 4
   selector:
     matchLabels:
       app: nginx-deployment
-  strategy: {}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2 
+      maxUnavailable: 1 
   template:
     metadata:
       labels:
         app: nginx-deployment
     spec:
       containers:
-      - image: nginx:1.14.2
+      - image: nginx:latest
         name: nginx
         resources:
           limits:

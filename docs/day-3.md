@@ -152,15 +152,70 @@ kubectl describe deployment nginx-deployment -n giropops
 ```
 
 ### Rollback
+
+O rollback permite desfazer mudanças em um deployment, voltando para uma versão anterior que estava funcionando corretamente.
+
+#### Ver Histórico de Revisões
+
 ```bash
-# Desfazer última atualização
+# Ver todas as revisões do deployment
+kubectl rollout history deployment nginx-deployment -n giropops
+```
+
+**Exemplo de saída:**
+```
+REVISION  CHANGE-CAUSE
+1         <none>
+2         kubectl set image deployment/nginx-deployment nginx=nginx:1.19.1
+3         kubectl set image deployment/nginx-deployment nginx=nginx:latest
+```
+
+#### Ver Detalhes de uma Revisão Específica
+
+```bash
+# Ver detalhes da revisão 2
+kubectl rollout history deployment nginx-deployment -n giropops --revision 2
+```
+
+**Exemplo de saída:**
+```
+deployment.apps/nginx-deployment with revision #2
+Pod Template:
+  Labels:	app=nginx-deployment
+  Containers:
+   nginx:
+    Image:	nginx:1.19.1
+    Port:	80/TCP
+    Host Port:	0/TCP
+    Environment:	<none>
+    Mounts:	<none>
+  Volumes:	<none>
+```
+
+#### Fazer Rollback
+
+```bash
+# Desfazer para a revisão anterior
 kubectl rollout undo deployment nginx-deployment -n giropops
 
-# Ver histórico
-kubectl rollout history deployment nginx-deployment -n giropops
+# Desfazer para uma revisão específica
+kubectl rollout undo deployment nginx-deployment -n giropops --to-revision=2
+```
 
-# Ver detalhes de uma revisão específica
-kubectl rollout history deployment nginx-deployment -n giropops --revision 6
+#### Monitorar Status do Rollback
+
+```bash
+# Verificar status do rollback
+kubectl rollout status deployment nginx-deployment -n giropops
+```
+
+#### Configurar Histórico de Revisões
+
+No deployment, você pode configurar quantas revisões manter:
+
+```yaml
+spec:
+  revisionHistoryLimit: 10  # Mantém as últimas 10 revisões
 ```
 
 ### Reiniciar deployment
