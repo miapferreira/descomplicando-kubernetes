@@ -179,6 +179,148 @@ spec:
             memory: 128Mi
 ```
 
+## Probes - Verificação de Integridade dos Pods
+
+Probes são modos de verificação que garantem a integridade dos pods. Eles permitem que o Kubernetes monitore o estado de saúde das aplicações e tome ações automáticas quando necessário.
+
+### Tipos de Probes
+
+#### 1. Liveness Probe
+Usado para saber quando um pod está vivo e rodando, garante a integridade dos pods. Se o liveness probe falhar, o Kubernetes reinicia o pod automaticamente.
+
+**Exemplo de Liveness Probe:**
+```yaml
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
+#### 2. Readiness Probe
+Verifica se o pod está ok e pronto para receber requisições externas. Se o readiness probe falhar, o pod é removido do service (não recebe tráfego), mas não é reiniciado.
+
+**Exemplo de Readiness Probe:**
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - curl
+      - -f
+      - http://localhost:80/
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+```
+
+#### 3. Startup Probe
+Executa um teste para saber se o pod está pronto, só é executado uma única vez e existem diversas formas de fazer esta verificação como por exemplo comando, http, porta, exec. É útil para aplicações que demoram para inicializar.
+
+**Exemplo de Startup Probe:**
+```yaml
+startupProbe:
+  tcpSocket:
+    port: 80
+  initialDelaySeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 1
+```
+
+### Métodos de Verificação
+
+- **httpGet**: Faz uma requisição HTTP GET para verificar se a aplicação responde
+- **tcpSocket**: Verifica se uma porta TCP está aberta e aceitando conexões
+- **exec**: Executa um comando dentro do container e verifica se retorna sucesso (exit code 0)
+
+### Parâmetros Importantes
+
+- **initialDelaySeconds**: Tempo de espera antes da primeira verificação
+- **periodSeconds**: Intervalo entre as verificações
+- **timeoutSeconds**: Tempo limite para cada verificação
+- **failureThreshold**: Número de falhas antes de considerar o probe como falhado
+- **successThreshold**: Número de sucessos necessários para considerar o probe como bem-sucedido
+
+### Ordem e Funcionamento dos Probes
+
+#### Quando usar o mesmo initialDelaySeconds?
+
+Ter o mesmo `initialDelaySeconds` para livenessProbe e readinessProbe pode ser um problema, dependendo do comportamento da aplicação:
+
+**Problemas Potenciais:**
+- **Conflito de Timing**: Se ambos os probes começarem a verificar ao mesmo tempo, você pode ter situações onde o readinessProbe ainda está falhando enquanto o livenessProbe já está tentando reiniciar o pod
+- **Reinicializações Desnecessárias**: Se o livenessProbe falhar antes da aplicação estar completamente pronta, o pod será reiniciado desnecessariamente
+
+#### Diferença Fundamental entre Liveness e Readiness
+
+**Liveness Probe:**
+- **O que faz**: Verifica se o pod está "vivo" (não travado, não em deadlock)
+- **Quando executa**: **Continuamente** durante toda a vida do pod
+- **Ação**: Reinicia o pod se falhar
+- **Objetivo**: Detectar quando a aplicação "morreu" durante a execução
+
+**Readiness Probe:**
+- **O que faz**: Verifica se o pod está pronto para receber tráfego
+- **Quando executa**: **Continuamente** durante toda a vida do pod
+- **Ação**: Remove o pod do service (não recebe tráfego) se falhar
+- **Objetivo**: Garantir que só pods saudáveis recebam requisições
+
+#### Estratégias Recomendadas
+
+**Opção 1: Readiness antes do Liveness**
+```yaml
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10  # Começa primeiro
+  periodSeconds: 5
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30  # Começa depois
+  periodSeconds: 10
+```
+
+**Opção 2: Usar Startup Probe (Recomendado)**
+```yaml
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 30  # Dá tempo para a aplicação inicializar
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 0  # Só começa após o startup probe
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 0  # Só começa após o startup probe
+  periodSeconds: 5
+```
+
+#### Resumo da Lógica
+
+- **Startup**: "A aplicação inicializou?"
+- **Readiness**: "A aplicação está pronta para tráfego?"
+- **Liveness**: "A aplicação ainda está viva?"
+
+Todos trabalham em conjunto, não em sequência! O `initialDelaySeconds` é apenas o tempo de espera **antes da primeira verificação**, não a ordem de execução.
+
 ## Comandos de Monitoramento
 
 ```bash
@@ -194,4 +336,7 @@ kubectl logs <pod-name>
 
 # Executar comando em um pod
 kubectl exec -it <pod-name> -- /bin/bash
+
+# Ver eventos relacionados aos probes
+kubectl describe pod <pod-name>
 ```
