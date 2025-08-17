@@ -3,3 +3,4 @@
 * [📚 Dia 2 - Limites de Utilização nos Pods](/docs/day-2.md)
 * [📚 Dia 3 - Deployments](/docs/day-3.md)
 * [📚 Dia 4 - Kubernetes Workloads](/docs/day-4.md)
+* [📚 Dia 5 - Cluster Kubernetes](/docs/day-5.md)
