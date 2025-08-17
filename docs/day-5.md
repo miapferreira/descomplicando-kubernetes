@@ -91,31 +91,43 @@ sudo sysctl --system
 
 #### 3. Instalar Pacotes do Kubernetes
 
+**Atualizar repositórios e instalar dependências:**
 ```bash
-# Atualizar repositórios e instalar dependências
-sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+```
 
-# Adicionar chave GPG do repositório Kubernetes
-curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+**Adicionar chave GPG do repositório Kubernetes:**
+```bash
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+```
 
-# Adicionar repositório Kubernetes
-echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+**Adicionar repositório Kubernetes:**
+```bash
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+```
 
-# Atualizar e instalar componentes
+**Atualizar e instalar componentes:**
+```bash
 sudo apt-get update
 sudo apt-get install -y kubelet kubeadm kubectl
+```
 
-# Impedir atualizações automáticas dos componentes
+**Impedir atualizações automáticas dos componentes:**
+```bash
 sudo apt-mark hold kubelet kubeadm kubectl
 ```
 
+**Nota**: O repositório Kubernetes foi migrado do Google Cloud para o novo repositório oficial em `pkgs.k8s.io`. Os comandos acima usam a versão mais recente e estável do Kubernetes.
+
 #### 4. Inicializar o Cluster (Control Plane)
 
+**Inicializar o cluster:**
 ```bash
-# Inicializar o cluster
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+```
 
-# Configurar kubectl para usuário não-root
+**Configurar kubectl para usuário não-root:**
+```bash
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
@@ -137,14 +149,18 @@ sudo kubeadm join <control-plane-ip>:6443 --token <token> --discovery-token-ca-c
 
 ### Verificação do Cluster
 
+**Verificar status dos nós:**
 ```bash
-# Verificar status dos nós
 kubectl get nodes
+```
 
-# Verificar componentes do control plane
+**Verificar componentes do control plane:**
+```bash
 kubectl get pods -n kube-system
+```
 
-# Verificar informações do cluster
+**Verificar informações do cluster:**
+```bash
 kubectl cluster-info
 ```
 
