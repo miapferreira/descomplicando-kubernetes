@@ -47,13 +47,19 @@ O kubeadm é a ferramenta oficial do Kubernetes para criar clusters. Suporta dif
 **Para que serve**: O Kubernetes precisa de módulos específicos do kernel para funcionar corretamente com containers e rede.
 
 ```bash
-cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+sudo vim /etc/modules-load.d/k8s.conf
+```
+
+**Conteúdo do arquivo:**
+```
 overlay
 br_netfilter
-EOF
+```
 
+```bash
 sudo modprobe overlay
 sudo modprobe br_netfilter
+```
 ```
 
 **Explicação dos módulos:**
@@ -65,12 +71,17 @@ sudo modprobe br_netfilter
 **Para que serve**: Garante que o tráfego de rede seja roteado corretamente entre containers e que o cluster funcione adequadamente.
 
 ```bash
-cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+sudo vim /etc/sysctl.d/k8s.conf
+```
+
+**Conteúdo do arquivo:**
+```
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
-EOF
+```
 
+```bash
 sudo sysctl --system
 ```
 
