@@ -119,3 +119,17 @@ Aqui está uma lista das portas comuns utilizadas no Kubernetes e suas respectiv
 - **Porta 80**: Porta padrão para tráfego HTTP.
 - **Porta 443**: Porta padrão para tráfego HTTPS.
 
+## CNI (Container Network Interface)
+
+### Weave Net
+- **Porta 6783/TCP**: Comunicação de controle e dados entre nós do Weave Net.
+- **Porta 6783-6784/UDP**: Tráfego de dados entre pods através do túnel Weave.
+
+### Calico
+- **Porta 179/TCP**: Protocolo BGP para roteamento entre nós (apenas se usar BGP).
+
+### Flannel
+- **Porta 4789/UDP**: Túnel VXLAN para comunicação entre pods.
+
+**⚠️ IMPORTANTE**: Se você estiver usando Weave Net como CNI (como no tutorial do dia 5), as portas 6783/TCP e 6783-6784/UDP são **OBRIGATÓRIAS** para o funcionamento correto do cluster. Sem essas portas, os pods não conseguirão se comunicar entre si.
+
