@@ -98,20 +98,11 @@ sudo apt-get update && sudo apt-get install -y apt-transport-https ca-certificat
 
 **Adicionar chave GPG do repositório Kubernetes:**
 ```bash
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo apt-key add -
 ```
 
 **Adicionar repositório Kubernetes:**
 ```bash
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-```
-
-**Alternativa se o método acima não funcionar:**
-```bash
-# Adicionar chave GPG usando apt-key (método alternativo)
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo apt-key add -
-
-# Adicionar repositório sem signed-by
 echo 'deb https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 ```
 
@@ -128,18 +119,7 @@ sudo apt-mark hold kubelet kubeadm kubectl
 
 **Nota**: O repositório Kubernetes foi migrado do Google Cloud para o novo repositório oficial em `pkgs.k8s.io`. Os comandos acima usam a versão mais recente e estável do Kubernetes.
 
-**Troubleshooting - Erro de chave GPG:**
-Se você receber erro `NO_PUBKEY` ou `The repository is not signed`, use os comandos alternativos acima ou execute:
-
-```bash
-# Limpar repositório anterior
-sudo rm -f /etc/apt/sources.list.d/kubernetes.list
-
-# Usar método alternativo
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo apt-key add -
-echo 'deb https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-sudo apt-get update
-```
+**Nota**: Este método usa `apt-key` que é o mais compatível com Ubuntu 24.04 e versões anteriores.
 
 #### 4. Inicializar o Cluster (Control Plane)
 
