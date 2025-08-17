@@ -60,7 +60,6 @@ br_netfilter
 sudo modprobe overlay
 sudo modprobe br_netfilter
 ```
-```
 
 **Explicação dos módulos:**
 - **overlay**: Permite que containers compartilhem o sistema de arquivos do host
