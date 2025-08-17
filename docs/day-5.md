@@ -193,7 +193,33 @@ sudo systemctl status kubelet
 
 **Inicializar o cluster:**
 ```bash
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+sudo kubeadm init --pod-network-cidr=10.10.0.0/16 --apiserver-advertise-address=IP_DA_MAQUINA
+```
+
+**Explicação dos parâmetros:**
+- `--pod-network-cidr=10.10.0.0/16`: Define a rede para os pods (deve ser diferente da rede do host)
+- `--apiserver-advertise-address=IP_DA_MAQUINA`: IP que será usado pelos worker nodes para se conectar
+
+**Após a inicialização, você verá uma mensagem como esta:**
+```
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+sudo kubeadm join 172.31.91.34:6443 --token 3vrkwi.kve7m3y3c8zawxvq \
+	--discovery-token-ca-cert-hash sha256:84378d3208d3bed7f3bd1be723fa4592679e9e9443f8a8a03c9f05726464dcfd
 ```
 
 **Configurar kubectl para usuário não-root:**
@@ -203,11 +229,53 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 
+**Verificar status do cluster:**
+```bash
+kubectl get nodes
+```
+
+**Exemplo de saída:**
+```
+NAME              STATUS     ROLES           AGE    VERSION
+ip-172-31-91-34   NotReady   control-plane   2m1s   v1.28.15
+```
+
+**Nota**: O status `NotReady` é normal neste momento, pois ainda não instalamos o plugin de rede.
+
 #### 6. Instalar CNI (Container Network Interface)
 
+**O que é CNI?**
+CNI (Container Network Interface) é um plugin de rede que permite que os pods se comuniquem entre si e com serviços externos. Sem um CNI, os pods ficam isolados e não conseguem se comunicar.
+
+**Por que precisamos de um CNI?**
+- **Comunicação entre pods** - Permite que pods em nós diferentes se comuniquem
+- **Load balancing** - Distribui tráfego entre pods
+- **Network policies** - Controla acesso à rede
+- **Status Ready** - Faz com que os nós fiquem prontos para receber pods
+
+**Instalar Weave Net (CNI recomendado):**
 ```bash
-# Exemplo com Flannel
-kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+```
+
+**Documentação oficial do Weave Net:**
+- [Weave Net Documentation](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/)
+- [Kubernetes Network Add-ons](https://kubernetes.io/docs/concepts/cluster-administration/addons/)
+
+**Verificar se o CNI foi instalado:**
+```bash
+kubectl get pods -n kube-system
+```
+
+**Aguardar os pods do Weave ficarem prontos e verificar status dos nós:**
+```bash
+kubectl get nodes
+```
+
+**Exemplo de saída após instalação do CNI:**
+```
+NAME              STATUS   ROLES           AGE   VERSION
+ip-172-31-91-34   Ready    control-plane   5m    v1.28.15
 ```
 
 #### 7. Adicionar Worker Nodes
