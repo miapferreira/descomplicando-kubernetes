@@ -8,8 +8,8 @@ spec:
   capacity:
     storage: 1Gi
   accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
+    - ReadWriteOnce # Tem acesso de leitura e escrita para um único node
+  persistentVolumeReclaimPolicy: Retain # Retém os dados após a remoção do volume
   hostPath:
     path: /mnt/data
   storageClassName: giropops
