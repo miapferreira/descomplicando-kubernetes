@@ -133,3 +133,4 @@ Aqui está uma lista das portas comuns utilizadas no Kubernetes e suas respectiv
 
 **⚠️ IMPORTANTE**: Se você estiver usando Weave Net como CNI (como no tutorial do dia 5), as portas 6783/TCP e 6783-6784/UDP são **OBRIGATÓRIAS** para o funcionamento correto do cluster. Sem essas portas, os pods não conseguirão se comunicar entre si.
 
+   
