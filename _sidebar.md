@@ -4,3 +4,5 @@
 * [📚 Dia 3 - Deployments](/docs/day-3.md)
 * [📚 Dia 4 - Kubernetes Workloads](/docs/day-4.md)
 * [📚 Dia 5 - Cluster Kubernetes](/docs/day-5.md)
+* [📚 Dia 6 - Kubernetes Persistent Storage](/docs/day-6.md)
+* [📚 Dia 7 - StatefulSets e Headless Services](/docs/day-7.md)
