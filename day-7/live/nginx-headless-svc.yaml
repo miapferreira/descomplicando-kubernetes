@@ -8,6 +8,6 @@ spec:
   ports:
   - port: 80
     name: http
-  clusterIP: None  # Note the lowercase 'c' and the correct indentation
+  clusterIP: None  # Não é um serviço headless, não tem IP clusterizado, não tem IP interno.
   selector:
     app: giropops-set
