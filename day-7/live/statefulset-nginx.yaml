@@ -3,8 +3,8 @@ kind: StatefulSet
 metadata:
   name: giropops-set
 spec:
-  serviceName: "giropops-set"
-  replicas: 3
+  serviceName: "giropops-set" # Nome do serviço que será criado para o StatefulSet
+  replicas: 3 
   selector:
     matchLabels:
       app: giropops-set
@@ -26,7 +26,7 @@ spec:
   - metadata:
       name: nginx-persistent-storage
     spec:
-      accessModes: ["ReadWriteOnce"]
+      accessModes: ["ReadWriteOnce"] 
       resources:
         requests:
           storage: 1Gi
