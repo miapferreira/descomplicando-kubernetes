@@ -45,7 +45,7 @@ No Kubernetes, o container engine e o container runtime desempenham papéis cruc
 Para uma compreensão visual da arquitetura do Kubernetes, consulte o diagrama abaixo que ilustra os componentes principais e suas interações:
 
 <div align="center">
-  <img src="assets/images/arquitetura-k8s.png" alt="Arquitetura do Kubernetes" width="800" style="max-width: 100%; height: auto;">
+  <img src="../arquitetura-k8s.png" alt="Arquitetura do Kubernetes" width="800" style="max-width: 100%; height: auto;">
   <br>
   <em>Figura 1: Visão geral da arquitetura do Kubernetes e seus componentes principais</em>
 </div>
