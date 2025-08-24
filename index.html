@@ -17,10 +17,14 @@
       subMaxLevel: 3,
       auto2top: true,
       // Configuração para servir arquivos estáticos
-      basePath: '/',
+      basePath: '',
       // Configuração para imagens
       loadNavbar: false,
       loadFooter: false,
+      // Configuração para servir arquivos estáticos
+      alias: {
+        '/assets/': './docs/assets/'
+      },
       copyCode: {
         buttonText: 'Copiar',
         errorText: 'Erro',
