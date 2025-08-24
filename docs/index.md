@@ -40,6 +40,16 @@ No Kubernetes, o container engine e o container runtime desempenham papéis cruc
 
 ## 🏗️ Arquitetura do Kubernetes
 
+### 📊 Diagrama da Arquitetura
+
+Para uma compreensão visual da arquitetura do Kubernetes, consulte o diagrama abaixo que ilustra os componentes principais e suas interações:
+
+<div align="center">
+  <img src="./assets/images/kubernetes-architecture.png" alt="Arquitetura do Kubernetes" width="800" style="max-width: 100%; height: auto;">
+  <br>
+  <em>Figura 1: Visão geral da arquitetura do Kubernetes e seus componentes principais</em>
+</div>
+
 ### Kubernetes Control Plane
 
 O Control Plane no Kubernetes é responsável por controlar e gerenciar o cluster. Ele coordena todas as atividades dentro do cluster e se comunica diretamente com os nós (workers) para garantir que os aplicativos estejam funcionando conforme esperado.
