@@ -146,6 +146,54 @@ spec:
 
 **Use quando:** Produção, aplicações públicas, alta disponibilidade
 
+#### 🚀 Exemplo Prático com EKS da AWS
+
+Para testar o LoadBalancer Service na AWS, você pode criar um cluster EKS temporário:
+
+**1. Criar cluster EKS (temporário para teste):**
+```bash
+eksctl create cluster \
+  --name=eks-test-cluster \
+  --version=1.24 \
+  --region=us-east-1 \
+  --nodegroup-name=eks-test-nodegroup \
+  --node-type=t3.medium \
+  --nodes=2 \
+  --nodes-min=1 \
+  --nodes-max=3 \
+  --managed
+```
+
+**2. Configurar kubectl para o cluster:**
+```bash
+aws eks --region us-east-1 update-kubeconfig --name eks-test-cluster
+```
+
+**3. Aplicar o LoadBalancer Service:**
+```bash
+kubectl apply -f day-7/live/nginx-deployment.yaml
+kubectl apply -f day-7/live/nginx-loadbalancer.yaml
+```
+
+**4. Verificar o LoadBalancer criado:**
+```bash
+kubectl get service nginx-loadbalancer
+# Aguarde o EXTERNAL-IP ser atribuído
+```
+
+**5. Testar o acesso externo:**
+```bash
+# Substitua EXTERNAL_IP pelo IP retornado pelo comando anterior
+curl http://EXTERNAL_IP
+```
+
+**⚠️ IMPORTANTE: Deletar o cluster após o teste para evitar custos!**
+```bash
+eksctl delete cluster --name=eks-test-cluster --region=us-east-1
+```
+
+**💡 Dica:** O cluster EKS pode levar 15-20 minutos para ser criado e deletado. Use apenas para testes e sempre delete após o uso!
+
 ### 4. Headless Service
 
 **Headless Service** é especial porque:
@@ -240,6 +288,9 @@ curl http://NODE_IP:30080
 # Aguarde o IP externo ser atribuído
 kubectl get service nginx-loadbalancer
 curl http://EXTERNAL_IP
+
+# ⚠️ IMPORTANTE: Para testes com EKS, sempre delete o cluster após o uso!
+# eksctl delete cluster --name=eks-test-cluster --region=us-east-1
 
 # Testar Headless Service
 kubectl run test-pod --image=busybox --rm -it --restart=Never -- nslookup giropops-service
@@ -544,6 +595,16 @@ kubectl delete statefulset giropops-set
 
 # Deletar Services
 kubectl delete service nginx-clusterip nginx-nodeport nginx-loadbalancer
+
+# 🚀 Comandos específicos para EKS (LoadBalancer)
+# Criar cluster de teste
+eksctl create cluster --name=eks-test-cluster --version=1.24 --region=us-east-1 --nodegroup-name=eks-test-nodegroup --node-type=t3.medium --nodes=2 --nodes-min=1 --nodes-max=3 --managed
+
+# Configurar kubectl para o cluster
+aws eks --region us-east-1 update-kubeconfig --name eks-test-cluster
+
+# Deletar cluster após teste (IMPORTANTE para evitar custos!)
+eksctl delete cluster --name=eks-test-cluster --region=us-east-1
 ```
 
 ## Resumo Prático
@@ -564,6 +625,7 @@ kubectl delete service nginx-clusterip nginx-nodeport nginx-loadbalancer
 - ✅ Use para: Produção, aplicações públicas, alta disponibilidade
 - ✅ Características: IP público, load balancer externo
 - ✅ Exemplo: `type: LoadBalancer`
+- ⚠️ **EKS/AWS:** Sempre delete clusters de teste para evitar custos
 
 #### Headless Service
 - ✅ Use para: StatefulSets, acesso direto aos pods
@@ -603,3 +665,10 @@ kubectl delete service nginx-clusterip nginx-nodeport nginx-loadbalancer
 3. **Use LoadBalancer** para produção com alta disponibilidade
 4. **Combine StatefulSets** com Headless Services para aplicações distribuídas
 5. **Monitore endpoints** dos Services para verificar conectividade
+
+### ⚠️ Cuidados com Custos (EKS/AWS)
+1. **Sempre delete clusters de teste** para evitar cobranças inesperadas
+2. **Use instâncias t3.medium** para testes (mais baratas)
+3. **Monitore o tempo de uso** - clusters EKS têm custo por hora
+4. **Configure alertas de billing** na sua conta AWS
+5. **Use tags para identificar** recursos de teste vs produção
