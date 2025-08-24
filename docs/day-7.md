@@ -1,10 +1,261 @@
-# Day 7: StatefulSets e Headless Services
+# Day 7: Services, StatefulSets e Headless Services
 
 ## Visão Geral
 
-No Day 7, vamos aprender sobre dois conceitos importantes do Kubernetes:
+No Day 7, vamos aprender sobre três conceitos fundamentais do Kubernetes:
+- **Services**: Para expor aplicações e permitir comunicação entre pods
 - **StatefulSets**: Para aplicações que precisam de identidade única e ordem
 - **Headless Services**: Para acessar pods diretamente sem balanceamento de carga
+
+## Services no Kubernetes
+
+### O que é um Service?
+
+Um **Service** é um recurso do Kubernetes que:
+- **Expõe aplicações** para serem acessadas por outros pods ou externamente
+- **Fornece balanceamento de carga** entre múltiplos pods
+- **Cria um ponto de entrada estável** para sua aplicação
+- **Resolve problemas de conectividade** quando pods são criados/destruídos
+
+### Por que precisamos de Services?
+
+Sem Services, você teria problemas como:
+- **IPs dinâmicos**: Pods mudam de IP quando são recriados
+- **Sem balanceamento**: Não há distribuição de carga entre pods
+- **Conectividade complexa**: Difícil para pods se comunicarem entre si
+- **Acesso externo limitado**: Não há forma padronizada de expor aplicações
+
+### Como funcionam Services?
+
+1. **Selector**: O Service identifica pods através de labels
+2. **Endpoints**: Cria automaticamente endpoints para cada pod selecionado
+3. **Balanceamento**: Distribui o tráfego entre os pods disponíveis
+4. **DNS**: Fornece resolução de nome para descoberta de serviço
+
+## Tipos de Services
+
+### 1. ClusterIP (Padrão)
+
+**ClusterIP** é o tipo padrão de Service que:
+- **Só é acessível dentro do cluster**
+- **Tem um IP interno** (ex: 10.96.0.1)
+- **Faz balanceamento de carga** entre pods
+- **É usado para comunicação interna** entre aplicações
+
+#### Exemplo Prático: ClusterIP Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+  labels:
+    app: nginx-clusterip
+    env: dev
+spec:
+  selector:
+    app: michel-deployment
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+  type: ClusterIP  # Padrão - só acessível dentro do cluster
+```
+
+**Características:**
+- ✅ Acessível apenas dentro do cluster
+- ✅ IP interno estável
+- ✅ Balanceamento de carga automático
+- ❌ Não acessível externamente
+
+**Use quando:** Aplicações internas, APIs entre microserviços, comunicação cluster-interna
+
+### 2. NodePort
+
+**NodePort** expõe o Service:
+- **Em uma porta específica** de todos os nodes do cluster
+- **Acessível externamente** via IP de qualquer node
+- **Mantém o ClusterIP** para acesso interno
+- **Porta fixa** em todos os nodes (ex: 30080)
+
+#### Exemplo Prático: NodePort Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport
+  labels:
+    app: nginx-nodeport
+    env: dev
+spec:
+  selector:
+    app: michel-deployment
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    nodePort: 30080  # Porta exposta em todos os nodes
+  type: NodePort
+```
+
+**Características:**
+- ✅ Acessível externamente via `NODE_IP:30080`
+- ✅ Mantém acesso interno via ClusterIP
+- ✅ Porta fixa em todos os nodes
+- ❌ Porta deve estar disponível em todos os nodes
+- ❌ Não é ideal para produção (sem SSL, sem domínio)
+
+**Use quando:** Desenvolvimento, testes, acesso externo simples
+
+### 3. LoadBalancer
+
+**LoadBalancer** é o tipo mais avançado que:
+- **Cria um load balancer externo** (se suportado pelo cloud provider)
+- **Expõe a aplicação externamente** com IP público
+- **Faz fallback para NodePort** se não houver load balancer
+- **Ideal para produção** com alta disponibilidade
+
+#### Exemplo Prático: LoadBalancer Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-loadbalancer
+  labels:
+    app: nginx-loadbalancer
+    env: dev
+spec:
+  selector:
+    app: michel-deployment
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+  type: LoadBalancer  # Cria um load balancer externo
+```
+
+**Características:**
+- ✅ IP público externo
+- ✅ Load balancer gerenciado pelo cloud provider
+- ✅ Alta disponibilidade e escalabilidade
+- ✅ Ideal para produção
+- ❌ Pode ter custo adicional
+- ❌ Requer suporte do cloud provider
+
+**Use quando:** Produção, aplicações públicas, alta disponibilidade
+
+### 4. Headless Service
+
+**Headless Service** é especial porque:
+- **NÃO tem IP interno** (`clusterIP: None`)
+- **NÃO faz balanceamento de carga**
+- **Permite acessar pods diretamente** pelos seus IPs individuais
+- **Ideal para StatefulSets** e aplicações distribuídas
+
+#### Exemplo Prático: Headless Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: giropops-service
+  labels:
+    app: giropops-service
+spec:
+  ports:
+  - port: 80
+    name: http
+  clusterIP: None  # Isso torna o serviço "headless"
+  selector:
+    app: giropops-set
+```
+
+**Características:**
+- ✅ Acesso direto aos pods
+- ✅ Sem balanceamento de carga
+- ✅ Ideal para StatefulSets
+- ✅ DNS retorna IPs de todos os pods
+- ❌ Não tem IP único para balanceamento
+- ❌ Cada pod deve ser acessado individualmente
+
+**Use quando:** StatefulSets, bancos de dados, aplicações que precisam de acesso direto aos pods
+
+## Comparação dos Tipos de Services
+
+| Tipo | Acesso Interno | Acesso Externo | Balanceamento | IP Público | Use Case |
+|------|----------------|----------------|---------------|------------|----------|
+| **ClusterIP** | ✅ Sim | ❌ Não | ✅ Sim | ❌ Não | Comunicação interna |
+| **NodePort** | ✅ Sim | ✅ Via Node IP | ✅ Sim | ❌ Não | Desenvolvimento/Teste |
+| **LoadBalancer** | ✅ Sim | ✅ Sim | ✅ Sim | ✅ Sim | Produção |
+| **Headless** | ✅ Direto aos pods | ❌ Não | ❌ Não | ❌ Não | StatefulSets |
+
+## Como testar os diferentes tipos de Services
+
+### 1. Preparar o ambiente
+
+Antes de testar os Services, você precisa ter o deployment base rodando:
+
+```bash
+# Aplicar o deployment base primeiro
+kubectl apply -f day-7/live/nginx-deployment.yaml
+
+# Verificar se os pods estão rodando
+kubectl get pods -l app=michel-deployment
+```
+
+### 2. Aplicar os Services
+
+```bash
+# Aplicar todos os tipos de Services
+kubectl apply -f day-7/live/nginx-clusterip.yaml
+kubectl apply -f day-7/live/nginx-nodeport.yaml
+kubectl apply -f day-7/live/nginx-loadbalancer.yaml
+```
+
+### 3. Verificar os Services criados
+
+```bash
+# Ver todos os Services
+kubectl get services
+
+# Ver detalhes de um Service específico
+kubectl describe service nginx-clusterip
+kubectl describe service nginx-nodeport
+kubectl describe service nginx-loadbalancer
+```
+
+### 4. Testar conectividade
+
+```bash
+# Testar ClusterIP (dentro do cluster)
+kubectl run test-pod --image=busybox --rm -it --restart=Never -- wget -O- nginx-clusterip:80
+
+# Testar NodePort (externamente)
+# Substitua NODE_IP pelo IP de um dos seus nodes
+curl http://NODE_IP:30080
+
+# Testar LoadBalancer (se disponível)
+# Aguarde o IP externo ser atribuído
+kubectl get service nginx-loadbalancer
+curl http://EXTERNAL_IP
+
+# Testar Headless Service
+kubectl run test-pod --image=busybox --rm -it --restart=Never -- nslookup giropops-service
+```
+
+### 5. Verificar endpoints
+
+```bash
+# Ver os endpoints de cada Service
+kubectl get endpoints nginx-clusterip
+kubectl get endpoints nginx-nodeport
+kubectl get endpoints nginx-loadbalancer
+
+# Ver detalhes dos endpoints
+kubectl describe endpoints nginx-clusterip
+```
 
 ## StatefulSet
 
@@ -37,7 +288,7 @@ metadata:
   name: giropops-set
 spec:
   serviceName: "giropops-set" # Nome do serviço que será criado
-  replicas: 3 
+  replicas: 3
   selector:
     matchLabels:
       app: giropops-set
@@ -51,7 +302,7 @@ spec:
         image: nginx
         ports:
         - containerPort: 80
-          name: http 
+          name: http
         volumeMounts:
         - name: nginx-persistent-storage
           mountPath: /usr/share/nginx/html
@@ -59,7 +310,7 @@ spec:
   - metadata:
       name: nginx-persistent-storage
     spec:
-      accessModes: ["ReadWriteOnce"] 
+      accessModes: ["ReadWriteOnce"]
       resources:
         requests:
           storage: 1Gi
@@ -106,7 +357,7 @@ Um **Headless Service** é um serviço especial que:
 ### Exemplo Prático: Headless Service
 
 ```yaml
-apiVersion: v1 
+apiVersion: v1
 kind: Service
 metadata:
   name: giropops-service
@@ -189,67 +440,7 @@ spec:
 - Armazenamento persistente para cada pod
 - Funciona melhor com Headless Service
 
-## Tipos de Services
 
-### 1. ClusterIP (Padrão)
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-clusterip
-spec:
-  selector:
-    app: michel-deployment
-  ports:
-  - port: 80
-    targetPort: 80
-  type: ClusterIP  # Padrão - só acessível dentro do cluster
-```
-
-### 2. NodePort
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-nodeport
-spec:
-  selector:
-    app: michel-deployment
-  ports:
-  - port: 80
-    targetPort: 80
-    nodePort: 30080  # Porta exposta em todos os nodes
-  type: NodePort
-```
-
-### 3. LoadBalancer
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-loadbalancer
-spec:
-  selector:
-    app: michel-deployment
-  ports:
-  - port: 80
-    targetPort: 80
-  type: LoadBalancer  # Cria um load balancer externo
-```
-
-### 4. Headless Service
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: giropops-service
-spec:
-  ports:
-  - port: 80
-  clusterIP: None  # Sem IP interno
-  selector:
-    app: giropops-set
-```
 
 ## Exemplo Completo: Banco de Dados com StatefulSet
 
@@ -314,8 +505,13 @@ spec:
 
 ```bash
 # Aplicar todos os recursos
-kubectl apply -f statefulset-nginx.yaml
-kubectl apply -f nginx-headless-svc.yaml
+kubectl apply -f day-7/live/statefulset-nginx.yaml
+kubectl apply -f day-7/live/nginx-headless-svc.yaml
+
+# Aplicar todos os tipos de Services
+kubectl apply -f day-7/live/nginx-clusterip.yaml
+kubectl apply -f day-7/live/nginx-nodeport.yaml
+kubectl apply -f day-7/live/nginx-loadbalancer.yaml
 
 # Ver StatefulSets
 kubectl get statefulset
@@ -323,11 +519,19 @@ kubectl get statefulset
 # Ver pods do StatefulSet
 kubectl get pods -l app=giropops-set
 
-# Ver serviços
+# Ver todos os Services
 kubectl get services
+
+# Ver detalhes de um Service específico
+kubectl describe service nginx-clusterip
+kubectl describe service nginx-nodeport
+kubectl describe service nginx-loadbalancer
 
 # Testar DNS do Headless Service
 kubectl run test --image=busybox --rm -it --restart=Never -- nslookup giropops-service
+
+# Testar conectividade dos Services
+kubectl run test-pod --image=busybox --rm -it --restart=Never -- wget -O- nginx-clusterip:80
 
 # Ver logs de um pod específico
 kubectl logs giropops-set-0
@@ -337,29 +541,65 @@ kubectl scale statefulset giropops-set --replicas=5
 
 # Deletar StatefulSet (mantém os volumes)
 kubectl delete statefulset giropops-set
+
+# Deletar Services
+kubectl delete service nginx-clusterip nginx-nodeport nginx-loadbalancer
 ```
 
 ## Resumo Prático
+
+### Services - Tipos e Usos
+
+#### ClusterIP
+- ✅ Use para: Comunicação interna, APIs entre microserviços
+- ✅ Características: IP interno estável, balanceamento automático
+- ✅ Exemplo: `type: ClusterIP` (padrão)
+
+#### NodePort
+- ✅ Use para: Desenvolvimento, testes, acesso externo simples
+- ✅ Características: Porta fixa em todos os nodes, mantém ClusterIP
+- ✅ Exemplo: `type: NodePort, nodePort: 30080`
+
+#### LoadBalancer
+- ✅ Use para: Produção, aplicações públicas, alta disponibilidade
+- ✅ Características: IP público, load balancer externo
+- ✅ Exemplo: `type: LoadBalancer`
+
+#### Headless Service
+- ✅ Use para: StatefulSets, acesso direto aos pods
+- ✅ Características: Sem IP interno, sem balanceamento
+- ✅ Exemplo: `clusterIP: None`
 
 ### StatefulSet
 - ✅ Use para: Bancos de dados, aplicações com estado
 - ✅ Características: Nomes fixos, ordem de criação, volumes únicos
 - ✅ Exemplo: `mongodb-0`, `mongodb-1`, `mongodb-2`
 
-### Headless Service
-- ✅ Use para: Acessar pods diretamente
-- ✅ Características: Sem IP interno, sem balanceamento
-- ✅ Exemplo: `clusterIP: None`
-
 ### Quando usar juntos?
-- StatefulSet + Headless Service = Perfeito para aplicações distribuídas
-- Cada pod pode ser acessado diretamente pelo seu nome
-- Ideal para bancos de dados, caches, sistemas de mensagens
+- **StatefulSet + Headless Service** = Perfeito para aplicações distribuídas
+- **Deployment + ClusterIP** = Para APIs e aplicações internas
+- **Deployment + NodePort** = Para desenvolvimento e testes
+- **Deployment + LoadBalancer** = Para produção e aplicações públicas
 
 ## Dicas Importantes
 
+### Services
+1. **ClusterIP é o padrão** - não precisa especificar `type: ClusterIP`
+2. **NodePort** expõe em todos os nodes, mas porta deve estar disponível
+3. **LoadBalancer** requer suporte do cloud provider
+4. **Headless Services** são ideais para StatefulSets
+5. **Services usam labels** para selecionar pods automaticamente
+
+### StatefulSets
 1. **StatefulSets são mais lentos** que Deployments (criação ordenada)
 2. **Headless Services** são essenciais para StatefulSets
 3. **Volumes são mantidos** mesmo se o pod for deletado
 4. **Nomes dos pods** nunca mudam em StatefulSets
 5. **Escalabilidade** é mais controlada em StatefulSets
+
+### Boas Práticas
+1. **Use ClusterIP** para comunicação interna entre pods
+2. **Use NodePort** apenas para desenvolvimento e testes
+3. **Use LoadBalancer** para produção com alta disponibilidade
+4. **Combine StatefulSets** com Headless Services para aplicações distribuídas
+5. **Monitore endpoints** dos Services para verificar conectividade

@@ -1,0 +1,23 @@
+repos:
+  # Remove trailing whitespaces e garante newline no final do arquivo
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    # - id: trailing-whitespace
+    #  - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+
+  # Black (formatador Python) — pode remover se não usar Python
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+
+  # Detect secrets — útil p/ evitar commits de senhas/tokens
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
