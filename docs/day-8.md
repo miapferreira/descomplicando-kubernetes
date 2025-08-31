@@ -195,9 +195,44 @@ data:
 - **Chaves SSH** → `kubernetes.io/ssh-auth`
 - **Service Accounts** → `kubernetes.io/service-account-token` (automático)
 
+## O que são ConfigMaps?
+
+ConfigMaps são usados para armazenar configurações não-sensíveis dos pods, como:
+- Arquivos de configuração
+- Variáveis de ambiente
+- Comandos de linha
+- URLs de serviços
+
+### Exemplo de ConfigMap para Nginx HTTPS
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    http {
+        server {
+            listen 80;
+            listen 443 ssl;
+            ssl_certificate /etc/nginx/tls/certificado.crt;
+            ssl_certificate_key /etc/nginx/tls/chave-privada.key;
+
+            location / {
+                return 200 'Hello, World!';
+                add_header Content-Type text/plain;
+            }
+        }
+    }
+```
+
 ## Exemplo Prático: Nginx com HTTPS
 
-Para demonstrar o uso de Secrets e ConfigMaps, vamos criar um exemplo prático de nginx configurado com HTTPS usando certificados TLS.
+Para demonstrar como **Secrets** e **ConfigMaps** trabalham juntos, vamos criar um exemplo prático de nginx configurado com HTTPS usando certificados TLS.
 
 ### 1. Criando Certificados com OpenSSL
 
