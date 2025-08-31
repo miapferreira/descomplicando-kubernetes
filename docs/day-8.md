@@ -197,11 +197,63 @@ data:
 
 ## O que são ConfigMaps?
 
-ConfigMaps são usados para armazenar configurações não-sensíveis dos pods, como:
-- Arquivos de configuração
-- Variáveis de ambiente
-- Comandos de linha
-- URLs de serviços
+ConfigMaps são recursos do Kubernetes que permitem **separar a configuração da aplicação** do código da aplicação. É como ter um "arquivo de configuração externo" que pode ser alterado sem precisar recompilar ou reempacotar a aplicação.
+
+### 🎯 **Por que usar ConfigMaps?**
+
+Imagine que você tem uma aplicação que precisa se conectar a diferentes bancos de dados dependendo do ambiente:
+- **Desenvolvimento**: `localhost:3306`
+- **Homologação**: `homolog-db.company.com:3306`  
+- **Produção**: `prod-db.company.com:3306`
+
+**Sem ConfigMaps**: Você precisaria criar 3 imagens diferentes da aplicação
+**Com ConfigMaps**: Uma única imagem + 3 configurações diferentes
+
+### 📋 **O que pode ser armazenado em ConfigMaps:**
+
+1. **Arquivos de configuração** → `nginx.conf`, `application.properties`, `config.yaml`
+2. **Variáveis de ambiente** → `DATABASE_URL`, `API_KEY`, `LOG_LEVEL`
+3. **Comandos de linha** → Argumentos para executar a aplicação
+4. **URLs de serviços** → Endpoints de APIs, bancos de dados
+5. **Configurações de rede** → Portas, timeouts, retry policies
+
+### 🔧 **Como funcionam:**
+
+1. **Criar** o ConfigMap com as configurações
+2. **Montar** no pod como arquivo ou variável de ambiente
+3. **Aplicação lê** a configuração do local montado
+4. **Alterar configuração** = recriar ConfigMap + restart do pod
+
+### 📁 **Formas de usar ConfigMaps:**
+
+#### **1. Como arquivo montado no pod:**
+```yaml
+volumeMounts:
+- name: config-volume
+  mountPath: /etc/app/config
+volumes:
+- name: config-volume
+  configMap:
+    name: app-config
+```
+
+#### **2. Como variáveis de ambiente:**
+```yaml
+env:
+- name: DATABASE_URL
+  valueFrom:
+    configMapKeyRef:
+      name: app-config
+      key: database_url
+```
+
+#### **3. Como arquivo individual:**
+```yaml
+volumeMounts:
+- name: config-volume
+  mountPath: /etc/nginx/nginx.conf
+  subPath: nginx.conf
+```
 
 ### Exemplo de ConfigMap para Nginx HTTPS
 
@@ -329,40 +381,7 @@ spec:
         path: chave-privada.key
 ```
 
-## O que são ConfigMaps?
-
-ConfigMaps são usados para armazenar configurações não-sensíveis dos pods, como:
-- Arquivos de configuração
-- Variáveis de ambiente
-- Comandos de linha
-- URLs de serviços
-
-### Exemplo de ConfigMap para Nginx HTTPS
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-config
-data:
-  nginx.conf: |
-    events {
-        worker_connections 1024;
-    }
-    http {
-        server {
-            listen 80;
-            listen 443 ssl;
-            ssl_certificate /etc/nginx/tls/certificado.crt;
-            ssl_certificate_key /etc/nginx/tls/chave-privada.key;
-
-            location / {
-                return 200 'Hello, World!';
-                add_header Content-Type text/plain;
-            }
-        }
-    }
-```
+### 4. Criando o Deployment
 
 ### 4. Criando o Deployment
 
