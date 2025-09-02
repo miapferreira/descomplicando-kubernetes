@@ -29,6 +29,51 @@ O **Kube-Prometheus** é um conjunto de manifestos Kubernetes que inclui:
 4. **Node Exporter** → Coleta métricas dos nós do cluster
 5. **Kube State Metrics** → Expõe métricas do estado do Kubernetes
 
+## O que é Observabilidade?
+
+**Observabilidade** é a capacidade de entender o que está acontecendo dentro de um sistema através de **métricas**, **logs** e **tracing**. No contexto do Kubernetes, isso significa ter visibilidade completa sobre:
+
+- **📊 Métricas** → Performance, uso de recursos, saúde dos pods
+- **📝 Logs** → O que está acontecendo dentro das aplicações
+- **🔍 Tracing** → Como as requisições fluem entre serviços
+
+### 🎯 **Prometheus Operator + Kube-Prometheus = Observabilidade Completa**
+
+O **Prometheus Operator** e **Kube-Prometheus** juntos fornecem uma solução completa de observabilidade para clusters Kubernetes:
+
+#### **1. Métricas (Metrics)**
+- **Prometheus** → Coleta métricas do cluster e aplicações
+- **Node Exporter** → Métricas dos nós (CPU, memória, disco)
+- **Kube State Metrics** → Estado do Kubernetes (pods, deployments, services)
+
+#### **2. Visualização (Dashboards)**
+- **Grafana** → Dashboards para visualizar as métricas
+- **Dashboards pré-configurados** → Para Kubernetes, aplicações, etc.
+
+#### **3. Alertas (Alerts)**
+- **Alertmanager** → Gerencia e envia alertas
+- **Regras de alerta** → Para problemas críticos
+
+### 🌟 **Benefícios da Observabilidade:**
+
+1. **Detecção proativa** de problemas
+2. **Visibilidade completa** do cluster
+3. **Alertas automáticos** para problemas críticos
+4. **Dashboards** para análise de performance
+5. **Histórico** de métricas para análise
+
+### 🔧 **Como Funciona:**
+
+```yaml
+# O Prometheus Operator automaticamente:
+# 1. Descobre novos serviços para monitorar
+# 2. Configura coleta de métricas
+# 3. Cria dashboards no Grafana
+# 4. Configura alertas no Alertmanager
+```
+
+**Resumo**: O Prometheus Operator + Kube-Prometheus são a solução completa de observabilidade para clusters Kubernetes, fornecendo métricas, visualização, alertas e descoberta automática de serviços.
+
 ## O que é o Amazon EKS?
 
 O **Amazon Elastic Kubernetes Service (EKS)** é um serviço gerenciado do AWS que facilita a execução de clusters Kubernetes na nuvem AWS. Ele remove a complexidade de gerenciar a infraestrutura do cluster, permitindo que você se concentre no desenvolvimento de aplicações.
