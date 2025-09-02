@@ -7,3 +7,4 @@
 * [📚 Dia 6 - Kubernetes Persistent Storage](/docs/day-6.md)
 * [📚 Dia 7 - Services, StatefulSets e Headless Services](/docs/day-7.md)
 * [📚 Dia 8 - Secrets e ConfigMaps](/docs/day-8.md)
+* [📚 Dia 9 - Monitoramento com Prometheus Operator](/docs/day-9.md)
