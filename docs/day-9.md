@@ -80,7 +80,7 @@ O **Amazon Elastic Kubernetes Service (EKS)** é um serviço gerenciado do AWS q
 
 ### 🌟 **Vantagens do EKS:**
 
-- **Gerenciamento simplificado**: AWS gerencia o plano de controle
+- **Gerenciamento simplificado**: AWS gerencia o control-plane
 - **Alta disponibilidade**: Múltiplas zonas de disponibilidade
 - **Integração nativa**: Integra com outros serviços AWS
 - **Segurança**: IAM, VPC, e outros controles de segurança
@@ -117,7 +117,7 @@ eksctl version
 ```bash
 eksctl create cluster \
   --name=eks-cluster \
-  --version=1.24 \
+  --version=1.29 \
   --region=us-east-1 \
   --nodegroup-name=eks-cluster-nodegroup \
   --node-type=t3.medium \
@@ -130,8 +130,10 @@ eksctl create cluster \
 ### Comando em uma linha
 
 ```bash
-eksctl create cluster --name=eks-cluster --version=1.24 --region=us-east-1 --nodegroup-name=eks-cluster-nodegroup --node-type=t3.medium --nodes=2 --nodes-min=1 --nodes-max=3 --managed
+eksctl create cluster --name=eks-cluster --version=1.29 --region=us-east-1 --nodegroup-name=eks-cluster-nodegroup --node-type=t3.medium --nodes=2 --nodes-min=1 --nodes-max=3 --managed
 ```
+
+> **⚠️ IMPORTANTE**: Sempre verifique a versão mais recente do Kubernetes disponível no EKS. Use `eksctl get cluster --region=us-east-1` para ver versões suportadas ou consulte a [documentação oficial do EKS](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html).
 
 ### Parâmetros explicados:
 
@@ -197,6 +199,30 @@ kubectl get services -n monitoring
 ```
 
 ## Acessando os Dashboards
+
+### 🔧 **Por que usar `kubectl port-forward`?**
+
+Por padrão, os serviços no Kubernetes **não são acessíveis externamente**. O `port-forward` cria um túnel seguro do seu localhost para o serviço dentro do cluster:
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-k8s 9090:9090
+#                    ↑                ↑                ↑     ↑
+#                    namespace        serviço          porta  porta
+#                                                      local  remota
+```
+
+**Tradução**: "Crie um túnel do meu localhost:9090 para o serviço prometheus-k8s:9090 no namespace monitoring"
+
+#### **🎯 Vantagens do port-forward:**
+- **Segurança** → Não expõe serviços publicamente
+- **Simplicidade** → Não precisa configurar Ingress ou LoadBalancer
+- **Desenvolvimento** → Acesso rápido para testes
+- **Temporário** → Conexão que termina quando você para o comando
+
+#### **⚠️ Limitações:**
+- **Temporário** → Para quando você para o comando
+- **Uma conexão** → Só você pode acessar
+- **Desenvolvimento** → Não é para produção
 
 ### Prometheus
 
@@ -282,28 +308,4 @@ kubectl get pods -n monitoring
 kubectl logs -n monitoring daemonset/node-exporter
 ```
 
-## Boas Práticas
 
-### Para EKS:
-
-1. **Use múltiplas zonas de disponibilidade** para alta disponibilidade
-2. **Configure Auto Scaling Groups** para escalabilidade
-3. **Use IAM roles** para permissões de pods
-4. **Monitore custos** regularmente
-5. **Configure backup** dos dados importantes
-
-### Para Monitoramento:
-
-1. **Configure alertas** para métricas críticas
-2. **Use dashboards** para visualização
-3. **Monitore recursos** do cluster regularmente
-4. **Configure retenção** de dados apropriada
-5. **Teste alertas** regularmente
-
-## Próximos Passos
-
-1. **Configurar alertas** personalizados
-2. **Criar dashboards** customizados no Grafana
-3. **Implementar métricas** de aplicação
-4. **Configurar notificações** via Slack/Email
-5. **Implementar backup** e recuperação
