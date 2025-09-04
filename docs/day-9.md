@@ -252,6 +252,245 @@ kubectl port-forward -n monitoring svc/alertmanager-main 9093:9093
 
 Acesse: http://localhost:9093
 
+## Service Monitor e Pod Monitor
+
+### O que é Service Monitor?
+
+O **ServiceMonitor** é um recurso customizado (CRD) do Prometheus Operator que define **como o Prometheus deve descobrir e coletar métricas** de serviços Kubernetes. Ele é responsável por:
+
+- **Descoberta automática** de serviços para monitoramento
+- **Configuração de scraping** (coleta de métricas)
+- **Definição de endpoints** e intervalos de coleta
+- **Seleção de serviços** baseada em labels
+
+### O que é Pod Monitor?
+
+O **PodMonitor** é similar ao ServiceMonitor, mas focado em **monitorar pods diretamente** em vez de serviços. Útil quando você quer monitorar pods específicos sem criar um serviço.
+
+### 🎯 **Fluxo de Monitoramento:**
+
+1. **Aplicação** → Expõe métricas em `/metrics`
+2. **Exporter** → Converte métricas para formato Prometheus
+3. **Service** → Expõe o exporter
+4. **ServiceMonitor** → Define como coletar métricas
+5. **Prometheus** → Coleta automaticamente as métricas
+
+## Exemplo Prático: Monitorando Nginx
+
+Vamos criar um exemplo completo de monitoramento do Nginx usando ServiceMonitor.
+
+### 1. ConfigMap do Nginx
+
+Primeiro, criamos um ConfigMap com configuração do Nginx que expõe métricas:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      server {
+        listen 80;
+        location / {
+          root /usr/share/nginx/html;
+          index index.html index.htm;
+        }
+        location /metrics {
+          stub_status on;
+          access_log off;
+        }
+      }
+    }
+```
+
+### 2. Deployment com Nginx + Exporter
+
+Criamos um Deployment que roda tanto o Nginx quanto o nginx-prometheus-exporter:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9113'
+    spec: 
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+      - name: prometheus-exporter
+        image: nginx/nginx-prometheus-exporter:1.4.2
+        args:
+          - '-nginx.scrape-uri=http://localhost/metrics'
+        resources:
+          requests:
+            cpu: 0.3
+            memory: 128Mi
+        ports:
+        - containerPort: 9113
+          name: metrics
+      volumes:  
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+          defaultMode: 420
+```
+
+### 3. Service para o Exporter
+
+Criamos um Service que expõe as métricas do exporter:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 9113
+    name: metrics
+  selector:
+    app: nginx
+```
+
+### 4. ServiceMonitor
+
+Agora criamos o ServiceMonitor que diz ao Prometheus como coletar as métricas:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-service-monitor
+  labels:
+    app: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  endpoints:
+  - interval: 10s
+    path: /metrics
+    targetPort: 9113
+```
+
+### 5. PrometheusRule (Alertas)
+
+Criamos regras de alerta para o Nginx:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nginx-prometheus-rule
+  namespace: monitoring
+  labels:
+    prometheus: k8s
+    role: alert-rules
+spec:
+  groups:
+  - name: nginx-prometheus-rule
+    rules:
+    - alert: NginxDown
+      expr: nginx_up == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Nginx está fora"
+        description: "O nosso servidor web Nginx está fora"
+    - alert: NginxHighRequestRate
+      expr: rate(nginx_http_requests_total[5m]) > 10
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Nginx recebendo muitos requests"
+        description: "O Nginx está recebendo um número alto de requests"
+```
+
+### 6. Aplicando os Manifests
+
+```bash
+# Aplicar todos os recursos
+kubectl apply -f nginx.configmap.yaml
+kubectl apply -f nginx-deployment.yaml
+kubectl apply -f nginx-service.yaml
+kubectl apply -f service-monitor.yaml
+kubectl apply -f nginx-prometheus-rules.yaml
+```
+
+### 7. Verificando o Monitoramento
+
+**Verificar se o ServiceMonitor foi descoberto:**
+
+```bash
+kubectl get servicemonitors -n monitoring
+```
+
+**Verificar targets no Prometheus:**
+
+1. Acesse o Prometheus: `kubectl port-forward -n monitoring svc/prometheus-k8s 9090:9090`
+2. Vá em **Status → Targets**
+3. Procure por `nginx-service-monitor`
+
+**Verificar métricas:**
+
+```bash
+# Testar endpoint de métricas
+kubectl port-forward svc/nginx-service 9113:9113
+curl http://localhost:9113/metrics
+```
+
+## Pod Monitor (Alternativa)
+
+Se você quiser monitorar pods diretamente sem Service:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: pod-monitor
+  labels:
+    app: pod-monitor
+spec:
+  namespaceSelector:
+    matchNames:
+    - default
+  selector:
+    matchLabels:
+      app: pod-monitor
+  podMetricsEndpoints:
+  - interval: 10s
+    path: /metrics
+    targetPort: 9113
+```
+
 ## Comandos Úteis
 
 ### Verificar status do cluster EKS
@@ -272,6 +511,26 @@ kubectl logs -n monitoring deployment/grafana
 ```bash
 kubectl top nodes
 kubectl top pods -A
+```
+
+### Comandos para Service Monitor
+
+```bash
+# Listar ServiceMonitors
+kubectl get servicemonitors -A
+
+# Descrever ServiceMonitor específico
+kubectl describe servicemonitor nginx-service-monitor
+
+# Verificar PodMonitors
+kubectl get podmonitors -A
+
+# Verificar PrometheusRules
+kubectl get prometheusrules -n monitoring
+
+# Verificar se targets estão sendo descobertos
+kubectl port-forward -n monitoring svc/prometheus-k8s 9090:9090
+# Acesse: http://localhost:9090/targets
 ```
 
 ### Deletar o cluster EKS
@@ -306,6 +565,44 @@ kubectl get pods -n monitoring
 
 ```bash
 kubectl logs -n monitoring daemonset/node-exporter
+```
+
+### Problema: ServiceMonitor não descobre targets
+
+**Verificar labels do Service:**
+
+```bash
+kubectl get service nginx-service -o yaml
+# Verificar se as labels coincidem com o selector do ServiceMonitor
+```
+
+**Verificar se o ServiceMonitor está no namespace correto:**
+
+```bash
+kubectl get servicemonitors -A
+# ServiceMonitor deve estar no namespace 'monitoring'
+```
+
+**Verificar logs do Prometheus Operator:**
+
+```bash
+kubectl logs -n monitoring deployment/prometheus-operator
+```
+
+### Problema: Exporter não expõe métricas
+
+**Testar endpoint de métricas:**
+
+```bash
+kubectl port-forward svc/nginx-service 9113:9113
+curl http://localhost:9113/metrics
+```
+
+**Verificar se o exporter está rodando:**
+
+```bash
+kubectl get pods -l app=nginx
+kubectl logs <pod-name> -c prometheus-exporter
 ```
 
 
