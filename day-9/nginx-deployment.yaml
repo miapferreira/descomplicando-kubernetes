@@ -17,7 +17,7 @@ spec:
     spec: 
       containers:
       - name: nginx
-        image: nginx:1.14.2
+        image: nginx:latest
         ports:
         - containerPort: 80
           name: http
@@ -26,7 +26,7 @@ spec:
           mountPath: /etc/nginx/nginx.conf
           subPath: nginx.conf
       - name: prometheus-exporter
-        image: nginx/nginx-prometheus-exporter:0.11.0
+        image: nginx/nginx-prometheus-exporter:1.4.2 #verificar a versão mais recente
         args:
           - '-nginx.scrape-uri=http://localhost/metrics'
         resources:
