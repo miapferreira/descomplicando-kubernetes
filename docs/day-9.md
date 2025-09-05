@@ -469,26 +469,264 @@ curl http://localhost:9113/metrics
 
 ## Pod Monitor (Alternativa)
 
-Se você quiser monitorar pods diretamente sem Service:
+O **PodMonitor** é usado quando você quer monitorar **pods diretamente** sem criar um Service. É especialmente útil para workloads específicos que não precisam de exposição de rede.
+
+### 🎯 **Quando usar PodMonitor vs ServiceMonitor?**
+
+| Cenário | Usar | Motivo |
+|---------|------|--------|
+| **Aplicação web** | ServiceMonitor | Precisa de Service para acesso externo |
+| **DaemonSet** | PodMonitor | Cada nó tem um pod, não precisa de Service |
+| **Job/CronJob** | PodMonitor | Workload temporário, não precisa de Service |
+| **Sidecar exporter** | PodMonitor | Exporter interno, não precisa de Service |
+| **Pod de teste** | PodMonitor | Desenvolvimento/teste, não precisa de Service |
+
+### 📋 **Casos de Uso do PodMonitor**
+
+#### 1. **DaemonSet** (Mais comum)
+
+**Exemplo: Node Exporter em cada nó**
 
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: pod-monitor
-  labels:
-    app: pod-monitor
+  name: node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+```
+
+**Por que PodMonitor?**
+- ✅ Cada nó tem um pod do DaemonSet
+- ✅ Não precisa de Service (pods são efêmeros)
+- ✅ Monitoramento direto por nó
+- ✅ Descoberta automática de novos nós
+
+#### 2. **Jobs e CronJobs**
+
+**Exemplo: Job de backup com métricas**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: backup-job-monitor
+spec:
+  selector:
+    matchLabels:
+      job-type: backup
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 60s
+```
+
+**Por que PodMonitor?**
+- ✅ Jobs são temporários (não precisam de Service)
+- ✅ Monitoramento de execução única
+- ✅ Métricas de duração e sucesso/falha
+- ✅ Não desperdiça recursos com Service
+
+#### 3. **Sidecar Exporters**
+
+**Exemplo: Exporter interno em pod de aplicação**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: app-sidecar-monitor
+spec:
+  selector:
+    matchLabels:
+      app: my-app
+  podMetricsEndpoints:
+  - port: exporter
+    path: /metrics
+    interval: 15s
+```
+
+**Por que PodMonitor?**
+- ✅ Exporter roda como sidecar
+- ✅ Não precisa expor externamente
+- ✅ Monitoramento interno da aplicação
+- ✅ Menos overhead de rede
+
+#### 4. **Pods de Desenvolvimento/Teste**
+
+**Exemplo: Pod de teste com métricas**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: test-pod-monitor
+spec:
+  selector:
+    matchLabels:
+      environment: test
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+```
+
+**Por que PodMonitor?**
+- ✅ Pods temporários de teste
+- ✅ Não precisa de Service permanente
+- ✅ Monitoramento durante desenvolvimento
+- ✅ Fácil de limpar
+
+### 🔧 **Configuração Avançada do PodMonitor**
+
+#### **Monitoramento por Namespace**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: cross-namespace-monitor
 spec:
   namespaceSelector:
     matchNames:
-    - default
+    - production
+    - staging
   selector:
     matchLabels:
-      app: pod-monitor
+      monitoring: enabled
   podMetricsEndpoints:
-  - interval: 10s
+  - port: metrics
     path: /metrics
-    targetPort: 9113
+    interval: 30s
+```
+
+#### **Múltiplos Endpoints**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: multi-endpoint-monitor
+spec:
+  selector:
+    matchLabels:
+      app: complex-app
+  podMetricsEndpoints:
+  - port: http-metrics
+    path: /metrics
+    interval: 30s
+  - port: custom-metrics
+    path: /custom-metrics
+    interval: 60s
+```
+
+#### **Filtros por Labels**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: filtered-monitor
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+      version: "1.21"
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+```
+
+### ⚡ **Exemplo Prático: Monitorando DaemonSet**
+
+Vamos criar um exemplo completo de monitoramento de DaemonSet:
+
+#### **1. DaemonSet com Exporter**
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: custom-exporter
+  labels:
+    app: custom-exporter
+spec:
+  selector:
+    matchLabels:
+      app: custom-exporter
+  template:
+    metadata:
+      labels:
+        app: custom-exporter
+    spec:
+      containers:
+      - name: exporter
+        image: prom/node-exporter:latest
+        ports:
+        - containerPort: 9100
+          name: metrics
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+```
+
+#### **2. PodMonitor para o DaemonSet**
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: custom-exporter-monitor
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: custom-exporter
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+```
+
+### 🎯 **Resumo: Quando usar cada um?**
+
+| **Use ServiceMonitor quando:** | **Use PodMonitor quando:** |
+|-------------------------------|----------------------------|
+| ✅ Aplicação precisa de Service | ✅ DaemonSet (um pod por nó) |
+| ✅ Acesso externo necessário | ✅ Jobs/CronJobs temporários |
+| ✅ Load balancing necessário | ✅ Sidecar exporters |
+| ✅ Aplicação web/API | ✅ Pods de desenvolvimento |
+| ✅ Múltiplas réplicas | ✅ Workloads efêmeros |
+| ✅ Descoberta por DNS | ✅ Monitoramento interno |
+
+### 🚀 **Comandos para PodMonitor**
+
+```bash
+# Listar PodMonitors
+kubectl get podmonitors -A
+
+# Descrever PodMonitor específico
+kubectl describe podmonitor custom-exporter-monitor
+
+# Verificar se pods estão sendo descobertos
+kubectl get pods -l app=custom-exporter
+
+# Testar métricas de um pod específico
+kubectl port-forward pod/custom-exporter-xyz 9100:9100
+curl http://localhost:9100/metrics
 ```
 
 ## Comandos Úteis
