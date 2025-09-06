@@ -445,6 +445,228 @@ curl -H "Host: app1.local" http://localhost/
 curl -H "Host: app2.local" http://localhost/
 ```
 
+## Testando Domínios Localmente
+
+### **🔧 Configuração do /etc/hosts**
+
+Para testar domínios localmente, você precisa configurar o arquivo `/etc/hosts` do seu sistema:
+
+#### **1. Editar o arquivo hosts**
+
+**Linux/macOS:**
+```bash
+sudo nano /etc/hosts
+```
+
+**Windows:**
+```
+C:\Windows\System32\drivers\etc\hosts
+```
+
+#### **2. Adicionar entradas para seus domínios**
+
+```bash
+# Adicionar estas linhas no final do arquivo
+127.0.0.1 app1.local
+127.0.0.1 app2.local
+127.0.0.1 mafinfo.io
+127.0.0.1 exemplo.com
+```
+
+#### **3. Salvar e testar**
+
+```bash
+# Testar resolução DNS
+ping app1.local
+ping mafinfo.io
+
+# Testar no navegador
+# http://app1.local/
+# http://mafinfo.io/
+```
+
+### **📋 Exemplo completo de teste:**
+
+#### **1. Configurar Ingress com múltiplos domínios**
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-domain-ingress
+spec:
+  rules:
+  - host: app1.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app1-service
+            port:
+              number: 80
+  - host: app2.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app2-service
+            port:
+              number: 80
+  - host: mafinfo.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 80
+```
+
+#### **2. Configurar /etc/hosts**
+
+```bash
+# Editar arquivo hosts
+sudo nano /etc/hosts
+
+# Adicionar:
+127.0.0.1 app1.local
+127.0.0.1 app2.local
+127.0.0.1 mafinfo.io
+```
+
+#### **3. Aplicar e testar**
+
+```bash
+# Aplicar Ingress
+kubectl apply -f multi-domain-ingress.yaml
+
+# Testar com curl
+curl http://app1.local/
+curl http://app2.local/
+curl http://mafinfo.io/
+
+# Testar no navegador
+# Abrir: http://app1.local/
+# Abrir: http://mafinfo.io/
+```
+
+### **🔍 Verificações importantes:**
+
+#### **1. Verificar se o domínio resolve**
+
+```bash
+# Testar resolução DNS
+nslookup app1.local
+# Deve retornar: 127.0.0.1
+
+# Testar ping
+ping app1.local
+# Deve responder do 127.0.0.1
+```
+
+#### **2. Verificar se o Ingress está funcionando**
+
+```bash
+# Verificar Ingress
+kubectl get ingress
+
+# Verificar detalhes
+kubectl describe ingress multi-domain-ingress
+
+# Verificar se o controller está processando
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
+```
+
+#### **3. Testar conectividade**
+
+```bash
+# Testar com curl (simula navegador)
+curl -v http://app1.local/
+# Deve retornar HTML da aplicação
+
+# Testar com wget
+wget -O- http://mafinfo.io/
+```
+
+### **⚠️ Troubleshooting comum:**
+
+#### **Problema: Domínio não resolve**
+
+```bash
+# Verificar se está no /etc/hosts
+cat /etc/hosts | grep app1.local
+
+# Verificar permissões do arquivo
+ls -la /etc/hosts
+
+# Recarregar configuração DNS
+sudo systemctl restart systemd-resolved  # Linux
+sudo dscacheutil -flushcache             # macOS
+```
+
+#### **Problema: Ingress não funciona**
+
+```bash
+# Verificar se o controller está rodando
+kubectl get pods -n ingress-nginx
+
+# Verificar logs do controller
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
+
+# Verificar se o Ingress foi criado
+kubectl get ingress
+```
+
+#### **Problema: Aplicação não carrega**
+
+```bash
+# Testar Service diretamente
+kubectl port-forward svc/app1-service 8080:80
+curl http://localhost:8080
+
+# Verificar se os pods estão rodando
+kubectl get pods -l app=app1
+```
+
+### **🎯 Dicas importantes:**
+
+1. **Sempre use domínios `.local`** para testes locais
+2. **Reinicie o navegador** após editar /etc/hosts
+3. **Use `curl -v`** para ver headers HTTP completos
+4. **Verifique logs** do nginx-ingress-controller
+5. **Teste Services** diretamente antes do Ingress
+
+### **📱 Exemplo de teste completo:**
+
+```bash
+# 1. Configurar hosts
+echo "127.0.0.1 app1.local app2.local mafinfo.io" | sudo tee -a /etc/hosts
+
+# 2. Aplicar manifestos
+kubectl apply -f day-10/
+
+# 3. Verificar status
+kubectl get ingress
+kubectl get pods
+
+# 4. Testar domínios
+curl http://app1.local/        # Aplicação 1
+curl http://app2.local/        # Aplicação 2  
+curl http://mafinfo.io/        # Nginx
+
+# 5. Abrir no navegador
+# http://app1.local/
+# http://mafinfo.io/
+```
+
+**Agora você pode testar múltiplos domínios localmente como se fossem reais!** 🌐
+
 ## Balanceamento de Carga
 
 ### **Como funciona:**
