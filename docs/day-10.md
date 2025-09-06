@@ -268,6 +268,11 @@ spec:
 - ✅ **CORS**
 - ✅ **WebSocket**
 
+**📚 Repositório oficial:**
+- **GitHub**: https://github.com/kubernetes/ingress-nginx
+- **Documentação**: https://kubernetes.github.io/ingress-nginx/
+- **Annotations**: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/
+
 **Instalação no Kind:**
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
@@ -275,13 +280,13 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main
 
 ### **Outras opções:**
 
-| **Controller** | **Características** | **Uso** |
-|----------------|---------------------|---------|
-| **Traefik** | Auto-discovery, dashboard | Microserviços |
-| **HAProxy** | Alta performance | Carga alta |
-| **Istio Gateway** | Service mesh | Arquiteturas complexas |
-| **AWS ALB** | Integração AWS | EKS |
-| **GCP Ingress** | Integração GCP | GKE |
+| **Controller** | **Características** | **Uso** | **Links** |
+|----------------|---------------------|---------|-----------|
+| **Traefik** | Auto-discovery, dashboard | Microserviços | [GitHub](https://github.com/traefik/traefik) |
+| **HAProxy** | Alta performance | Carga alta | [GitHub](https://github.com/haproxytech/kubernetes-ingress) |
+| **Istio Gateway** | Service mesh | Arquiteturas complexas | [Istio](https://istio.io/latest/docs/tasks/traffic-management/ingress/) |
+| **AWS ALB** | Integração AWS | EKS | [AWS Docs](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html) |
+| **GCP Ingress** | Integração GCP | GKE | [GCP Docs](https://cloud.google.com/kubernetes-engine/docs/concepts/ingress) |
 
 ## Configuração no Kind
 
