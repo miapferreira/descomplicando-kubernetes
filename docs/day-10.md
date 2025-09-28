@@ -1170,10 +1170,257 @@ kubectl describe svc -n ingress-nginx ingress-nginx-controller
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
 ```
 
+## Cert-Manager: Gerenciamento Automático de Certificados TLS
+
+### O que é o Cert-Manager?
+
+O **cert-manager** é um operador nativo do Kubernetes que automatiza o gerenciamento e emissão de certificados TLS/X.509 a partir de várias fontes, incluindo Let's Encrypt, HashiCorp Vault, Venafi e certificados auto-assinados.
+
+### Funcionalidades e Finalidade
+
+#### 🔐 **Principais Funções:**
+- **Emissão automática** de certificados SSL/TLS
+- **Renovação automática** antes do vencimento
+- **Integração nativa** com Let's Encrypt (gratuito)
+- **Suporte a múltiplos** Certificate Authorities (CA)
+- **Gestão completa** do ciclo de vida dos certificados
+- **Integração** com ingress controllers
+
+#### 🎯 **Finalidade:**
+- **Segurança**: Garantir conexões HTTPS criptografadas
+- **Automação**: Eliminar trabalho manual de gerenciamento de certificados
+- **Produção**: Certificados válidos e confiáveis automaticamente
+- **Conformidade**: Atender padrões de segurança modernos
+
+#### 📚 **Documentação Oficial:**
+- Site oficial: https://cert-manager.io/
+- Documentação completa: https://cert-manager.io/docs/
+- Guia de instalação: https://cert-manager.io/docs/installation/
+
+### Instalação do Cert-Manager no EKS
+
+#### Pré-requisitos
+- Cluster EKS funcionando
+- kubectl configurado
+- nginx-ingress-controller instalado
+
+#### Passo 1: Instalação via Helm (Recomendado)
+
+```bash
+# Adicionar repositório Helm do cert-manager
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+# Instalar cert-manager
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.18.2 \
+  --set installCRDs=true
+
+# Verificar instalação
+kubectl get pods -n cert-manager
+```
+
+#### Passo 2: Instalação via Manifest (Alternativa)
+
+```bash
+# Aplicar CRDs
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+
+# Verificar instalação
+kubectl get pods -n cert-manager
+```
+
+### Configuração dos ClusterIssuers
+
+Os manifests estão localizados em `day-10/cert/`:
+
+#### Arquivo: `day-10/cert/production_issuer.yaml`
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-production
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: seu-email@exemplo.com  # ⚠️ ALTERE para seu email
+    privateKeySecretRef:
+      name: letsencrypt-production
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+```
+
+#### Arquivo: `day-10/cert/staging_issuer.yaml`
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: seu-email@exemplo.com  # ⚠️ ALTERE para seu email
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+```
+
+#### Aplicação dos ClusterIssuers
+
+```bash
+# Aplicar ClusterIssuer para produção (certificados válidos)
+kubectl apply -f day-10/cert/production_issuer.yaml
+
+# Aplicar Issuer para staging (testes)
+kubectl apply -f day-10/cert/staging_issuer.yaml
+
+# Verificar status
+kubectl get clusterissuer
+kubectl get issuer
+```
+
+### Configuração TLS no Ingress
+
+#### Ingress com Cert-Manager (`day-10/ingress-nginx.yaml`)
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: giropops-senhas
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-production"  # 🔐 Cert-manager
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"         # 🔄 HTTP → HTTPS
+spec:
+  tls:                                                       # 🔒 Seção TLS
+  - hosts:
+    - giropops.mafinfo.com.br
+    secretName: giropops-tls-secret                          # 📝 Secret para certificado
+  rules:
+  - host: giropops.mafinfo.com.br
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: giropops-senhas
+            port:
+              number: 80
+```
+
+#### Aplicação do Ingress com TLS
+
+```bash
+# Aplicar Ingress com configuração TLS
+kubectl apply -f day-10/ingress-nginx.yaml
+
+# Verificar certificado sendo gerado
+kubectl get certificate
+kubectl get secret giropops-tls-secret
+
+# Verificar status detalhado do certificado
+kubectl describe certificate giropops-tls-secret
+```
+
+### Processo Completo de Configuração
+
+#### 1. Instalar cert-manager
+```bash
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.18.2 \
+  --set installCRDs=true
+```
+
+#### 2. Configurar ClusterIssuers
+```bash
+# Editar email nos arquivos
+vim day-10/cert/production_issuer.yaml
+vim day-10/cert/staging_issuer.yaml
+
+# Aplicar configurações
+kubectl apply -f day-10/cert/production_issuer.yaml
+kubectl apply -f day-10/cert/staging_issuer.yaml
+```
+
+#### 3. Configurar Ingress com TLS
+```bash
+# Aplicar Ingress com annotations do cert-manager
+kubectl apply -f day-10/ingress-nginx.yaml
+```
+
+#### 4. Verificar funcionamento
+```bash
+# Verificar certificados
+kubectl get certificate
+kubectl get secret
+
+# Testar HTTPS (após DNS configurado)
+curl -v https://giropops.mafinfo.com.br/
+```
+
+### Troubleshooting de Certificados
+
+#### Verificar Status dos Certificados
+```bash
+# Listar certificados
+kubectl get certificate
+
+# Verificar detalhes de um certificado
+kubectl describe certificate giropops-tls-secret
+
+# Verificar challenges (validação Let's Encrypt)
+kubectl get challenges
+
+# Verificar orders (solicitações de certificado)
+kubectl get orders
+```
+
+#### Logs do Cert-Manager
+```bash
+# Logs do controller principal
+kubectl logs -n cert-manager deployment/cert-manager
+
+# Logs do webhook
+kubectl logs -n cert-manager deployment/cert-manager-webhook
+
+# Logs do cainjector
+kubectl logs -n cert-manager deployment/cert-manager-cainjector
+```
+
+#### Problemas Comuns
+
+1. **Certificado não é emitido:**
+   - Verificar se o DNS está apontando corretamente
+   - Verificar se o ClusterIssuer está READY
+   - Verificar logs do cert-manager
+
+2. **Challenge falha:**
+   - Verificar se o nginx-ingress está acessível externamente
+   - Verificar se a porta 80 está aberta no LoadBalancer
+
+3. **Certificado expirado:**
+   - Verificar se o cert-manager está rodando
+   - Verificar se o ClusterIssuer está configurado corretamente
+
 ### Observações finais
 
 - Em produção, prefira TLS com ACM via `cert-manager`
 - Use annotations específicas do EKS/NLB/ALB quando necessário (stickiness, health checks, scheme)
 - Versione seus manifests do Ingress junto com as apps para rastreabilidade
+- **Cert-manager** garante certificados válidos e renovação automática
+- **Let's Encrypt** oferece certificados gratuitos e confiáveis
+- **DNS** deve estar configurado corretamente para validação automática
 
 
