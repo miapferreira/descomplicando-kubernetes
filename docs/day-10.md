@@ -938,3 +938,242 @@ spec:
 7. **Troubleshooting** é essencial para produção
 
 
+## Ingress no Amazon EKS
+
+### Pré-requisitos
+
+- AWS CLI configurado e autenticado
+- kubectl instalado
+- eksctl instalado
+- Permissões AWS para criar VPC, Subnets, EC2, IAM e Load Balancer
+
+### Criando o cluster (referência do Day 9)
+
+Siga o mesmo padrão do [Day 9](docs/day-9.md) para criação do cluster EKS com o `eksctl`:
+
+```bash
+eksctl create cluster \
+  --name=eks-cluster \
+  --version=1.29 \
+  --region=us-east-1 \
+  --nodegroup-name=eks-cluster-nodegroup \
+  --node-type=t3.medium \
+  --nodes=2 \
+  --nodes-min=1 \
+  --nodes-max=3 \
+  --managed
+```
+
+Configure o contexto do kubectl para o cluster:
+
+```bash
+aws eks --region us-east-1 update-kubeconfig --name eks-cluster
+kubectl config current-context
+```
+
+### Contextos no kubectl
+
+O `kubectl` usa o conceito de "contextos" para apontar para clusters e namespaces diferentes.
+
+- Listar contextos:
+```bash
+kubectl config get-contexts
+```
+- Ver contexto atual:
+```bash
+kubectl config current-context
+```
+- Trocar de contexto:
+```bash
+kubectl config use-context <nome-do-contexto>
+```
+- Definir namespace padrão para um contexto:
+```bash
+kubectl config set-context --current --namespace default
+```
+
+Mantenha o contexto no cluster EKS antes de instalar o Ingress e fazer os deploys.
+
+### Instalar o ingress-nginx no EKS
+
+Para EKS, utilize os manifests específicos do provider AWS. Consulte sempre a documentação oficial:
+
+- Documentação oficial: https://kubernetes.github.io/ingress-nginx/deploy/#aws
+- Repositório: https://github.com/kubernetes/ingress-nginx
+
+Instalação (exemplo usando os manifests estáveis para AWS/NLB):
+
+```bash
+# Namespace e RBAC
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/aws/deploy.yaml
+
+# Aguardar o controller ficar pronto
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=180s
+
+# Verificar o Service do controller (tipo LoadBalancer)
+kubectl get svc -n ingress-nginx
+```
+
+Observações importantes no EKS:
+- O Service do controller é `type: LoadBalancer` e irá criar um **AWS NLB/ALB** (dependendo da config/annotations)
+- Em ambientes privados, ajuste as annotations do Service para NLB interno
+- Para TLS com certificados automáticos, considere integrar com `cert-manager` e ACM
+
+#### Annotations específicas para EKS/NLB:
+
+Para configurar o LoadBalancer do nginx-ingress-controller no EKS, você pode usar annotations no Service:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+  annotations:
+    # Para NLB interno (privado)
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    
+    # Para NLB com IP específico
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    
+    # Para ALB (Application Load Balancer)
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb-ip"
+    
+    # Para NLB com scheme específico
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"  # ou "internal"
+    
+    # Para health check personalizado
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "5"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "30"
+```
+
+Para aplicar essas configurações, edite o service após a instalação:
+```bash
+kubectl edit svc -n ingress-nginx ingress-nginx-controller
+```
+
+### Deploy dos exemplos (Day 10)
+
+Usaremos os manifests do diretório `day-10/` como exemplo:
+
+- `day-10/app-deployment.yaml`
+- `day-10/app-service.yaml`
+- `day-10/redis-deployment.yaml`
+- `day-10/redis-service.yaml`
+
+`day-10/ingress-nginx.yaml` (Ingress da aula)
+
+Aplicar os recursos no EKS:
+
+```bash
+kubectl apply -f day-10/redis-deployment.yaml
+kubectl apply -f day-10/redis-service.yaml
+kubectl apply -f day-10/app-deployment.yaml
+kubectl apply -f day-10/app-service.yaml
+
+# Aplicar o Ingress
+kubectl apply -f day-10/ingress-nginx.yaml
+
+# Verificar recursos criados
+kubectl get ingress -A
+kubectl describe ingress -n default giropops-senhas
+
+# Obter o hostname do Load Balancer (EKS)
+kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Testar acesso via LB usando o Host do Ingress (ajuste o domínio conforme seu arquivo)
+# Exemplo se o host do Ingress for mafinfo.com.br
+curl -H "Host: mafinfo.com.br" http://<hostname-do-lb>
+```
+
+Verificar se tudo subiu:
+
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get ingress
+```
+
+Exemplo simples de Ingress para a app no EKS (ajuste o host):
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: giropops-senhas-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: app.seu-dominio.com.br
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: giropops-senhas
+            port:
+              number: 80
+```
+
+Aplicar o Ingress:
+
+```bash
+kubectl apply -f giropops-senhas-ingress.yaml
+kubectl get ingress
+```
+
+### Acesso via Load Balancer (EKS)
+
+Após a instalação do controller, será criado um Service `ingress-nginx-controller` do tipo `LoadBalancer` no namespace `ingress-nginx`. Obtenha o hostname DNS do LB:
+
+```bash
+kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+```
+
+Com esse hostname (ex.: `k8s-ingress-xxxxxxxx.elb.amazonaws.com`), você pode:
+- Testar com curl usando o host definido no Ingress:
+```bash
+curl -H "Host: app.seu-dominio.com.br" http://<hostname-do-lb>
+```
+- Apontar seu domínio para o LB via DNS.
+
+### DNS: domínio válido e CNAME
+
+Para acesso público com domínio próprio, crie um registro DNS apontando para o LB:
+- Registros aceitos:
+  - CNAME de `app.seu-dominio.com.br` → `<hostname-do-lb>` (ex.: `xxxx.elb.amazonaws.com`)
+  - Em zonas apex (sem subdomínio), use ALIAS/ANAME (Route53) ao invés de CNAME
+- Propagação DNS pode levar alguns minutos
+- Após propagação, acesse: `https://app.seu-dominio.com.br` (se tiver TLS) ou `http://` sem TLS
+
+### Verificações úteis
+
+```bash
+# Status dos recursos
+kubectl get pods -A
+kubectl get svc -A
+kubectl get ingress -A
+
+# Descrever ingress e service do controller
+kubectl describe ingress giropops-senhas-ingress
+kubectl describe svc -n ingress-nginx ingress-nginx-controller
+
+# Logs do controller
+kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
+```
+
+### Observações finais
+
+- Em produção, prefira TLS com ACM via `cert-manager`
+- Use annotations específicas do EKS/NLB/ALB quando necessário (stickiness, health checks, scheme)
+- Versione seus manifests do Ingress junto com as apps para rastreabilidade
+
+
