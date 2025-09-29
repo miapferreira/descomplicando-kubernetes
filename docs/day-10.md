@@ -1197,6 +1197,10 @@ O **cert-manager** é um operador nativo do Kubernetes que automatiza o gerencia
 - Documentação completa: https://cert-manager.io/docs/
 - Guia de instalação: https://cert-manager.io/docs/installation/
 
+#### 📁 **Repositório com Manifests:**
+- Repositório GitHub: https://github.com/miapferreira/descomplicando-kubernetes
+- Manifests do Day 10: `day-10/` (incluindo certificados em `day-10/cert/`)
+
 ### Instalação do Cert-Manager no EKS
 
 #### Pré-requisitos
@@ -1423,4 +1427,149 @@ kubectl logs -n cert-manager deployment/cert-manager-cainjector
 - **Let's Encrypt** oferece certificados gratuitos e confiáveis
 - **DNS** deve estar configurado corretamente para validação automática
 
+## 📚 Referências e Links Úteis
+
+### Documentação Oficial
+- [Kubernetes Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+- [nginx-ingress-controller](https://kubernetes.github.io/ingress-nginx/)
+- [cert-manager](https://cert-manager.io/)
+- [Let's Encrypt](https://letsencrypt.org/)
+
+### Repositório do Projeto
+- **GitHub**: https://github.com/miapferreira/descomplicando-kubernetes
+- **Manifests Day 10**: `day-10/` (Ingress, Services, Deployments)
+- **Certificados**: `day-10/cert/` (ClusterIssuers para Let's Encrypt)
+
+### Comandos Úteis
+```bash
+# Clonar o repositório
+git clone https://github.com/miapferreira/descomplicando-kubernetes.git
+cd descomplicando-kubernetes
+
+# Aplicar todos os manifests do Day 10
+kubectl apply -f day-10/
+
+# Verificar status
+kubectl get ingress,svc,pods
+```
+
+
+
+## Labels vs Annotations no Kubernetes
+
+### O que são Labels?
+- Metadados pares `chave:valor` usados para **seleção, organização e filtragem** de objetos.
+- São indexados pelo Kubernetes, permitindo consultas eficientes com `label selectors`.
+- Usados para agrupar recursos logicamente (ex.: versão, ambiente, app).
+
+#### Exemplo prático de Labels
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  labels:
+    app: webapp
+    env: prod
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+        version: v2
+    spec:
+      containers:
+      - name: web
+        image: nginx:1.25
+```
+
+#### Selecionando por Labels
+```bash
+# Listar pods com label app=webapp
+kubectl get pods -l app=webapp
+
+# Selecionar múltiplos rótulos
+kubectl get deploy -l 'app=webapp,env=prod'
+
+# Usar em Services
+kubectl get svc -l app=webapp
+```
+
+### O que são Annotations?
+- Metadados pares `chave:valor` para **informações não indexadas** e **não usadas para seleção**.
+- Servem para armazenar **configurações, pistas para controladores** (ex.: Ingress, cert-manager), links, checksums, etc.
+- Não são usadas para seleção; não use annotations em `selectors`.
+
+#### Exemplo prático de Annotations no Ingress
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: giropops-senhas
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+spec:
+  tls:
+  - hosts:
+    - giropops.mafinfo.com.br
+    secretName: giropops-tls-secret
+  rules:
+  - host: giropops.mafinfo.com.br
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: giropops-senhas
+            port:
+              number: 80
+```
+
+#### Exemplo prático de Annotations no Service (EKS/NLB)
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: https
+    port: 443
+    targetPort: https
+```
+
+### Quando usar Labels vs Annotations
+- Use **labels** quando você precisa: selecionar, filtrar, agrupar, descobrir e rotear tráfego (via selectors).
+- Use **annotations** quando você precisa: configurar controladores, adicionar metadados não estruturados, links, checksums, ou dicas para automações.
+
+### Exercícios práticos
+```bash
+# 1) Marque um Deployment com labels e filtre
+kubectl label deploy giropops-senhas tier=backend owner=michel --overwrite
+kubectl get deploy -l tier=backend
+
+# 2) Adicione uma annotation de change-cause
+kubectl annotate deploy giropops-senhas kubernetes.io/change-cause="Atualiza imagem para v1.1" --overwrite
+kubectl describe deploy giropops-senhas | grep -A2 Annotations
+
+# 3) Aplique annotations no Ingress e verifique
+kubectl annotate ingress giropops-senhas nginx.ingress.kubernetes.io/proxy-body-size=10m --overwrite
+kubectl describe ingress giropops-senhas | grep -A5 Annotations
+```
 
