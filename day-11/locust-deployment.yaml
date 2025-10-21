@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust
+  labels:
+    app: locust
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+  template:
+    metadata:
+      labels:
+        app: locust
+    spec:
+      containers:
+      - name: locust
+        image: locustio/locust:latest
+        ports:
+        - containerPort: 8089
+        - containerPort: 5557
+        env:
+        - name: LOCUST_HOST
+          value: "http://nginx:80"  # Aponta para o service do nginx
+        volumeMounts:
+        - name: locustfile
+          mountPath: /mnt/locust
+          readOnly: true
+        command: ["locust"]
+        args: ["-f", "/mnt/locust/locustfile.py", "--host=http://nginx:80", "--web-host=0.0.0.0"]
+      volumes:
+      - name: locustfile
+        configMap:
+          name: locust-config
