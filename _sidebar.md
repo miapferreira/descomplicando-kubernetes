@@ -9,3 +9,4 @@
 * [📚 Dia 8 - Secrets e ConfigMaps](/docs/day-8.md)
 * [📚 Dia 9 - Monitoramento com Prometheus Operator](/docs/day-9.md)
 * [📚 Dia 10 - Ingress: Roteamento HTTP/HTTPS](/docs/day-10.md)
+* [📚 Dia 11 - HPA: Escalabilidade Automática](/docs/day-11.md)
