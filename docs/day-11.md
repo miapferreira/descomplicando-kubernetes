@@ -136,8 +136,7 @@ day-11/
 ├── primeiro-hpa.yaml        # Configuração do HPA
 ├── locust-configmap.yaml    # Script do Locust
 ├── locust-deployment.yaml   # Deployment do Locust
-├── locust-service.yaml      # Service do Locust
-└── teste-hpa.sh            # Script de teste automatizado
+└── locust-service.yaml      # Service do Locust
 ```
 
 ### **2. Aplicação de exemplo (deployment.yaml):**
@@ -196,7 +195,7 @@ spec:
 ### **4. Configuração do HPA (primeiro-hpa.yaml):**
 
 ```yaml
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: nginx-hpa
@@ -207,7 +206,46 @@ spec:
     name: nginx
   minReplicas: 3        # Mínimo de 3 pods
   maxReplicas: 10       # Máximo de 10 pods
-  targetCPUUtilizationPercentage: 50  # Target de 50% CPU
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # Target de 50% CPU (pod-level)
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80  # Target de 80% Memory (pod-level)
+  - type: ContainerResource
+    containerResource:
+      name: cpu
+      container: nginx
+      target:
+        type: Utilization
+        averageUtilization: 70  # Target de 70% CPU (container-level)
+  - type: ContainerResource
+    containerResource:
+      name: memory
+      container: nginx
+      target:
+        type: Utilization
+        averageUtilization: 85  # Target de 85% Memory (container-level)
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60  # Janela de estabilização para scale up
+      policies:
+      - type: Percent
+        value: 100                    # Pode escalar 100% a cada período
+        periodSeconds: 15             # A cada 15 segundos
+    scaleDown:
+      stabilizationWindowSeconds: 300 # Janela de estabilização para scale down (5 min)
+      policies:
+      - type: Percent
+        value: 10                     # Pode reduzir apenas 10% a cada período
+        periodSeconds: 60             # A cada 60 segundos
 ```
 
 ### **5. Script do Locust (locust-configmap.yaml):**
@@ -321,19 +359,48 @@ spec:
 
 ## Executando o Teste de HPA
 
-### **1. Aplicar todos os recursos:**
+### **1. Aplicar todos os recursos (processo manual):**
 
 ```bash
-# Aplicar na ordem correta
+# 1. Aplicar service da aplicação
 kubectl apply -f nginx-service.yaml
+
+# 2. Aplicar deployment da aplicação
 kubectl apply -f deployment.yaml
+
+# 3. Aguardar pods ficarem prontos
+kubectl wait --for=condition=ready pod -l app=nginx --timeout=60s
+
+# 4. Aplicar HPA
 kubectl apply -f primeiro-hpa.yaml
+
+# 5. Aplicar ConfigMap do Locust
 kubectl apply -f locust-configmap.yaml
+
+# 6. Aplicar deployment do Locust
 kubectl apply -f locust-deployment.yaml
+
+# 7. Aplicar service do Locust
 kubectl apply -f locust-service.yaml
+
+# 8. Aguardar Locust ficar pronto
+kubectl wait --for=condition=ready pod -l app=locust --timeout=60s
 ```
 
-### **2. Acessar o Locust:**
+### **2. Verificar se tudo está funcionando:**
+
+```bash
+# Verificar pods
+kubectl get pods
+
+# Verificar services
+kubectl get svc
+
+# Verificar HPA
+kubectl get hpa
+```
+
+### **3. Acessar o Locust:**
 
 ```bash
 # Port-forward para acessar o Locust
@@ -343,13 +410,15 @@ kubectl port-forward svc/locust 8089:8089
 # http://localhost:8089
 ```
 
-### **3. Configurar o teste no Locust:**
+### **4. Configurar o teste no Locust:**
 
 - **Number of users**: 50-100
 - **Spawn rate**: 10
 - **Host**: http://nginx:80
 
-### **4. Monitorar o HPA:**
+### **5. Monitorar o HPA (processo manual):**
+
+Durante o teste, execute estes comandos periodicamente para observar o comportamento:
 
 ```bash
 # Ver status do HPA
@@ -359,11 +428,20 @@ kubectl get hpa nginx-hpa
 kubectl top pods -l app=nginx
 
 # Ver pods em tempo real
-watch kubectl get pods -l app=nginx
+kubectl get pods -l app=nginx
 
 # Ver detalhes do HPA
 kubectl describe hpa nginx-hpa
+
+# Ver eventos do HPA
+kubectl get events --field-selector involvedObject.name=nginx-hpa
 ```
+
+**Sequência recomendada:**
+1. Execute o teste no Locust
+2. A cada 30 segundos, execute `kubectl get hpa nginx-hpa` e `kubectl top pods -l app=nginx`
+3. Observe como os valores mudam conforme a carga aumenta
+4. Use `kubectl describe hpa nginx-hpa` para ver detalhes do scaling
 
 ## Comandos de Monitoramento
 
@@ -463,6 +541,91 @@ spec:
         averageUtilization: 80
 ```
 
+## Tipos de Métricas no HPA
+
+O HPA v2 suporta diferentes tipos de métricas para scaling baseado em diferentes níveis de granularidade.
+
+### **1. Resource (Pod-level)**
+Monitora recursos a nível de pod (soma de todos os containers):
+
+```yaml
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: 50
+```
+
+### **2. ContainerResource (Container-level)**
+Monitora recursos de um container específico:
+
+```yaml
+- type: ContainerResource
+  containerResource:
+    name: cpu
+    container: nginx
+    target:
+      type: Utilization
+      averageUtilization: 70
+```
+
+### **Diferenças entre Resource e ContainerResource:**
+
+| Aspecto | Resource | ContainerResource |
+|---------|----------|-------------------|
+| **Granularidade** | Pod-level | Container-level |
+| **Cálculo** | Soma de todos containers | Container específico |
+| **Precisão** | Menos precisa | Mais precisa |
+| **Uso** | Pods com 1 container | Pods com múltiplos containers |
+| **Performance** | Mais rápido | Mais detalhado |
+
+### **Quando usar ContainerResource:**
+- **Pods com múltiplos containers** (sidecar patterns)
+- **Containers com diferentes perfis** de recursos
+- **Monitoramento granular** por container
+- **Debugging específico** de performance
+
+## Behavior: Controlando o Scaling
+
+O **behavior** permite controlar como o HPA faz scaling up e down, tornando-o mais inteligente e evitando flutuações desnecessárias.
+
+### **Componentes do Behavior:**
+
+**1. stabilizationWindowSeconds:**
+- **Scale Up**: Tempo para aguardar antes de aplicar mudanças (padrão: 0)
+- **Scale Down**: Tempo para aguardar antes de reduzir pods (padrão: 300s)
+
+**2. policies:**
+- **type**: Tipo de política (`Percent` ou `Pods`)
+- **value**: Valor máximo de mudança
+- **periodSeconds**: Intervalo entre aplicações
+
+### **Exemplo de Behavior:**
+
+```yaml
+behavior:
+  scaleUp:
+    stabilizationWindowSeconds: 60    # Aguarda 1 minuto
+    policies:
+    - type: Percent
+      value: 100                      # Pode dobrar (100%) os pods
+      periodSeconds: 15               # A cada 15 segundos
+  scaleDown:
+    stabilizationWindowSeconds: 300   # Aguarda 5 minutos
+    policies:
+    - type: Percent
+      value: 10                       # Pode reduzir apenas 10%
+      periodSeconds: 60               # A cada 60 segundos
+```
+
+### **Benefícios do Behavior:**
+
+- **Scale Up Rápido**: Responde rapidamente ao aumento de carga
+- **Scale Down Conservador**: Evita reduzir pods muito rapidamente
+- **Estabilidade**: Janelas de estabilização previnem flutuações
+- **Controle Granular**: Políticas personalizáveis por cenário
+
 ## Troubleshooting
 
 ### **Problemas comuns:**
@@ -505,17 +668,28 @@ kubectl describe hpa nginx-hpa
 ### **2. Configuração do HPA:**
 - **minReplicas**: Mantenha um mínimo para disponibilidade
 - **maxReplicas**: Limite para controlar custos
-- **targetCPUUtilizationPercentage**: Comece com 70-80%
+- **Resource metrics**: Para pods com 1 container (mais simples)
+- **ContainerResource metrics**: Para pods com múltiplos containers (mais preciso)
+- **CPU targets**: Configure entre 50-80%
+- **Memory targets**: Configure entre 70-90%
+- **behavior**: Use para controlar velocidade de scaling
 
 ### **3. Monitoramento:**
 - **Monitore métricas** antes de configurar HPA
 - **Use alertas** para detectar problemas
 - **Teste** com carga real
 
-### **4. Testes:**
+### **4. Configuração de Behavior:**
+- **Scale Up**: Use valores altos (50-100%) para resposta rápida
+- **Scale Down**: Use valores baixos (10-20%) para estabilidade
+- **Stabilization Windows**: Configure adequadamente para seu ambiente
+- **Teste diferentes políticas** para encontrar o equilíbrio ideal
+
+### **5. Testes:**
 - **Use ferramentas como Locust** para gerar carga
 - **Teste scale up e scale down**
 - **Monitore comportamento** durante testes
+- **Teste diferentes configurações de behavior**
 
 ## Conclusão
 

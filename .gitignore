@@ -113,6 +113,7 @@ Thumbs.db
 *.key
 *.pem
 *.crt
+*.csr
 *.p12
 *.pfx
 *.p8
