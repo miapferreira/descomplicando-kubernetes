@@ -8,7 +8,7 @@ spec:
     image: nginx:latest
     resources: 
       limits:
-        cpu: "100m"
+        cpu: "101m"
         memory: "128Mi"
       requests:
         cpu: "50m"

@@ -13,4 +13,4 @@ spec:
         patchStrategicMerge:
           metadata:
             labels:
-              app: my-app
+              app: application_test
